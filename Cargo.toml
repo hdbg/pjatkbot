@@ -1,0 +1,19 @@
+[package]
+name = "schedulebot"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+chrono = { version = "0.4.38", features = ["serde"] }
+reqwest = { version = "0.12.8", features = ["brotli", "deflate", "gzip", "zstd"] }
+rust-i18n = "3.1.2"
+scraper = "0.20.0"
+serde = { version = "1.0.210", features = ["derive"] }
+slog = "2.7.0"
+slog-term = "2.9.1"
+sloggers = "2.2.0"
+strum = { version = "0.26.3", features = ["derive"] }
+teloxide = "0.13.0"
+thiserror = "1.0.64"
+tokio = { version = "1.40.0", features = ["full"] }
+toml = "0.8.19"
