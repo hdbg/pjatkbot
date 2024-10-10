@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 chrono = { version = "0.4.38", features = ["serde"] }
+chrono-tz = "0.10.0"
 reqwest = { version = "0.12.8", features = ["brotli", "deflate", "gzip", "zstd"] }
 rust-i18n = "3.1.2"
 scraper = "0.20.0"
