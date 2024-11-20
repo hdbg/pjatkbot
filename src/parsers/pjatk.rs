@@ -67,6 +67,7 @@ mod deduct {
         match class.kind.as_str() {
             "Wykład" | "Lektorat" => ClassKind::Lecture,
             "Ćwiczenia" => ClassKind::Seminar,
+            "Projekt dyplomowy" => ClassKind::DiplomaThesis,
             name => panic!("can't deduct pjatk class kind '{}'", name),
         }
     }
@@ -93,7 +94,11 @@ mod deduct {
         // }
 
         // return normalized_groups;
-        raw_groups.map(|x| Group { code: x.to_owned() }).collect()
+        raw_groups
+            .map(|x| Group {
+                code: x.trim().to_owned(),
+            })
+            .collect()
     }
 
     use chrono::TimeZone;
@@ -102,15 +107,18 @@ mod deduct {
         let begin_time = chrono::NaiveTime::parse_from_str(&class.from, "%H:%M:%S").unwrap();
         let end_time = chrono::NaiveTime::parse_from_str(&class.to, "%H:%M:%S").unwrap();
 
-        let datetime = NaiveDateTime::new(date, begin_time);
-        let duration = end_time - begin_time;
+        let datetime_begin = NaiveDateTime::new(date, begin_time);
+        let utc_begin = chrono_tz::Europe::Warsaw
+            .from_local_datetime(&datetime_begin)
+            .unwrap();
 
-        let utc_time = chrono_tz::Europe::Warsaw
-            .from_local_datetime(&datetime)
+        let datetime_end = NaiveDateTime::new(date, end_time);
+        let utc_end = chrono_tz::Europe::Warsaw
+            .from_local_datetime(&datetime_end)
             .unwrap();
         TimeRange {
-            start: utc_time.with_timezone(&Utc),
-            duration,
+            start: utc_begin.with_timezone(&Utc),
+            end: utc_end.with_timezone(&Utc),
         }
     }
 

@@ -4,8 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+bson = { version = "2.13.0", features = ["chrono", "chrono-0_4"] }
 chrono = { version = "0.4.38", features = ["serde"] }
 chrono-tz = "0.10.0"
+eyre = "0.6.12"
+mongodb = "3.1.0"
 reqwest = { version = "0.12.8", features = ["brotli", "deflate", "gzip", "zstd"] }
 rust-i18n = "3.1.2"
 scraper = "0.20.0"
