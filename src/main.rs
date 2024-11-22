@@ -40,7 +40,7 @@ async fn main() -> eyre::Result<()> {
 
     let mut manager = parsing::manager::ParserManager::new(&db, pjatk, &config.pjatk, &logger);
 
-    manager.parse().await?;
+    manager.work().await?;
 
     Ok(())
 }

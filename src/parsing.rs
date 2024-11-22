@@ -4,18 +4,18 @@ pub trait IntoLocalized {
     fn localized(&self, locale: &str) -> &str;
 }
 
-pub trait ScheduleParser {
+pub trait ScheduleParser: Send + Sync + 'static {
     const NAME: &'static str;
     fn parse_day(
         &mut self,
         day: chrono::NaiveDate,
-    ) -> impl std::future::Future<Output = eyre::Result<Vec<Class>>>;
+    ) -> impl std::future::Future<Output = eyre::Result<Vec<Class>>> + Send;
 }
 
 pub mod types;
 
 pub mod manager {
-    use std::{collections::HashSet, hash::RandomState};
+    use std::{collections::HashSet, convert::Infallible, hash::RandomState};
 
     use bson::{doc, DateTime};
     use chrono::{NaiveDate, NaiveTime, TimeDelta, Utc};
@@ -157,7 +157,7 @@ pub mod manager {
             })
         }
 
-        pub async fn parse(&mut self) -> eyre::Result<()> {
+        pub async fn parse_one(&mut self) -> eyre::Result<()> {
             let selector = self.select_date().await?;
             let parsed_day = self.parser.parse_day(selector.date.clone()).await?;
             replace_or_fill_day(&self.class_collection, parsed_day.into_iter()).await?;
@@ -181,6 +181,17 @@ pub mod manager {
                 .upsert(true)
                 .await?;
             Ok(())
+        }
+
+        pub fn work(mut self) -> tokio::task::JoinHandle<eyre::Result<Infallible>> {
+            let fut = async move {
+                loop {
+                    let result = self.parse_one().await;
+
+                    tokio::time::sleep(self.config.interval).await;
+                }
+            };
+            tokio::task::spawn(fut)
         }
     }
     pub async fn replace_or_fill_day(

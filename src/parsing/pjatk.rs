@@ -1,4 +1,4 @@
-use std::{collections::HashMap, panic::Location, str::FromStr};
+use std::{collections::HashMap, panic::Location, str::FromStr, sync::Arc};
 
 use chrono::{DateTime, Datelike, NaiveDate, Utc};
 use chrono_tz::Africa::Mogadishu;
@@ -65,35 +65,6 @@ impl Parser {
             client: reqwest::Client::new(),
             state: HashMap::new(),
         }
-    }
-
-    fn modify_date(state: &mut ASPState, new_date: NaiveDate) {
-        let date_value = new_date.to_string();
-        println!("{}", date_value.to_string());
-
-        state.insert("DataPicker".to_owned(), date_value.to_owned());
-        state.insert("DataPicker$dateInput".to_owned(), date_value.to_owned());
-
-        state.insert("DataPicker_dateInput_ClientState".to_owned(), format!(r#"{{"enabled":true,"emptyMessage":"","validationText":"{date_value}-00-00-00","valueAsString":"{date_value}-00-00-00","minDateStr":"1980-01-01-00-00-00","maxDateStr":"2099-12-31-00-00-00","lastSetTextBoxValue":"{date_value}"}}"#));
-
-        let today_date = Utc::now().date_naive();
-        state.insert("DataPicker_calendar_SD".to_owned(), "[]".to_owned());
-        state.insert(
-            "DataPicker_calendar_AD".to_owned(),
-            format!(
-                "[[1980,1,1],[2099,12,30],[{},{},{}]]",
-                today_date.year(),
-                today_date.month(),
-                today_date.day()
-            ),
-        );
-        println!("{:#?}", state);
-    }
-    fn create_initial_state(req: NaiveDate) -> ASPState {
-        let mut state_override = HashMap::new();
-
-        Self::modify_date(&mut state_override, req);
-        state_override
     }
 
     fn is_reservation(html: &Html) -> bool {
@@ -221,22 +192,8 @@ impl Parser {
         Self::parse_detail_html(&fragment_html, style)
     }
 
-    async fn parse_day_raw(&mut self, req: NaiveDate) -> Result<Vec<PjatkClass>, ParseError> {
-        // self.state = Self::create_initial_state(req);
-        let resp = self
-            .client
-            .get(GENERAL_SCHEDULE_ENDPOINT)
-            // .form(&self.state)
-            .send()
-            .await?
-            .error_for_status()?
-            .text()
-            .await?;
-        println!("{}", resp);
-
-        let body = scraper::Html::parse_document(&resp);
-
-        // println!("{}", body);
+    fn update_state_from_html(&mut self, text: &str) -> Result<(), ParseError> {
+        let body = scraper::Html::parse_document(&text);
 
         // setup element initial state
         let input_selector = scraper::Selector::parse("input").expect("selector is static");
@@ -249,13 +206,12 @@ impl Parser {
                     self.state.insert(key.to_string(), value);
                 }
             }
-            // let key = hpe!(state_elem.attr("name")).to_string();
-
-            // if key.starts_with("__") {
-            // }
         }
 
-        // Self::modify_date(&mut self.state, req);
+        Ok(())
+    }
+
+    fn default_headers() -> HeaderMap {
         let mut headers = HeaderMap::new();
         headers.insert(
             "x-requested-with",
@@ -267,19 +223,22 @@ impl Parser {
             CONTENT_TYPE,
             HeaderValue::from_static("application/x-www-form-urlencoded; charset=UTF-8"),
         );
+        headers
+    }
 
+    fn prepare_date_update_state(&mut self, date: &NaiveDate) {
         let table = &mut self.state;
         table_insert!(
             table,
             ["RadScriptManager1", "RadAjaxPanel1Panel|DataPicker"],
             ["__EVENTTARGET", "DataPicker"],
             ["__EVENTARGUMENT", ""],
-            ["DataPicker", req.to_string()],
-            ["DataPicker$dateInput", req.to_string()],
+            ["DataPicker", date.to_string()],
+            ["DataPicker$dateInput", date.to_string()],
             [
                 "DataPicker_dateInput_ClientState",
                 format!(
-                    r#"{{"enabled":true,"emptyMessage":"","validationText":"{req}-00-00-00","valueAsString":"{req}-00-00-00","minDateStr":"1980-01-01-00-00-00","maxDateStr":"2099-12-31-00-00-00","lastSetTextBoxValue":"{req}"}}"#
+                    r#"{{"enabled":true,"emptyMessage":"","validationText":"{date}-00-00-00","valueAsString":"{date}-00-00-00","minDateStr":"1980-01-01-00-00-00","maxDateStr":"2099-12-31-00-00-00","lastSetTextBoxValue":"{date}"}}"#
                 )
             ],
             ["DataPicker_ClientState", ""],
@@ -287,23 +246,10 @@ impl Parser {
             ["RadAJAXControlID", "RadAjaxPanel1"], 
             ["RadScriptManager1_TSM", ";;System.Web.Extensions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35:en-US:ceece802-cb39-4409-a6c9-bfa3b2c8bf10:ea597d4b:b25378d2;Telerik.Web.UI, Version=2018.1.117.40, Culture=neutral, PublicKeyToken=121fae78165ba3d4:en-US:3346c3e6-3c4c-4be3-94e3-1928d6a828a1:16e4e7cd:f7645509:ed16cbdc:88144a7a:33715776:24ee1bba:f46195d3:c128760b:874f8ea2:19620875:cda80b3:383e4ce8:1e771326:2003d0b8:aa288e2d:258f1c72:8674cba1:7c926187:b7778d6c:c08e9f8a:a51ee93e:59462f1:6d43f6d9:2bef5fcc:e06b58fd"]
         );
+    }
 
-        println!("{:#?}", self.state);
-
-        let resp = self
-            .client
-            .post(GENERAL_SCHEDULE_ENDPOINT)
-            .headers(headers)
-            .form(&self.state)
-            .send()
-            .await?;
-
-        println!("{:#?}", resp);
-
-        let resp = resp.error_for_status()?.text().await?;
-        println!("{}", resp);
-
-        let body = scraper::Html::parse_document(&resp);
+    fn collect_class_ids(&mut self, document: &str) -> Result<Vec<(String, String)>, ParseError> {
+        let body = scraper::Html::parse_document(&document);
 
         // main class parsing logic
         const CLASS_TABLE_SELECTOR: &str = "#ZajeciaTable > tbody";
@@ -311,16 +257,54 @@ impl Parser {
         let class_table_selector = Selector::parse(CLASS_TABLE_SELECTOR).expect("static_selector");
         let table = hpe!(body.select(&class_table_selector).next());
 
-        let mut classes = Vec::new();
         const CLASS_ITEM_SELECTOR: &str = "td[id$=\";z\"]"; // every class id ends with ;z
         let class_item_selector = Selector::parse(CLASS_ITEM_SELECTOR).expect("static selector");
 
+        let mut class_id_style_collected = Vec::new();
+
         for class in table.select(&class_item_selector) {
-            println!("{:#?}", class);
-            if let Some(class) = self
-                .parse_detail(hpe!(class.attr("id")), class.attr("style").unwrap_or(""))
-                .await?
-            {
+            class_id_style_collected.push((
+                hpe!(class.attr("id").map(String::from)),
+                class
+                    .attr("style")
+                    .map(String::from)
+                    .unwrap_or("".to_owned()),
+            ));
+        }
+
+        Ok(class_id_style_collected)
+    }
+
+    async fn parse_day_raw(&mut self, req: NaiveDate) -> Result<Vec<PjatkClass>, ParseError> {
+        let mut classes = Vec::new();
+
+        let resp = self
+            .client
+            .get(GENERAL_SCHEDULE_ENDPOINT)
+            // .form(&self.state)
+            .send()
+            .await?
+            .error_for_status()?
+            .text()
+            .await?;
+
+        self.update_state_from_html(&resp)?;
+        self.prepare_date_update_state(&req);
+
+        let resp = self
+            .client
+            .post(GENERAL_SCHEDULE_ENDPOINT)
+            .headers(Self::default_headers())
+            .form(&self.state)
+            .send()
+            .await?;
+
+        let resp = resp.error_for_status()?.text().await?;
+
+        let class_id_style_collected = self.collect_class_ids(&resp)?;
+
+        for class in class_id_style_collected.iter() {
+            if let Some(class) = self.parse_detail(&class.0, &class.1).await? {
                 classes.push(class);
             }
         }
