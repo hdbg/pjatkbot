@@ -2451,6 +2451,7 @@ dependencies = [
  "chrono",
  "chrono-tz",
  "eyre",
+ "futures",
  "mongodb",
  "reqwest 0.12.8",
  "rust-i18n",

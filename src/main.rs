@@ -1,10 +1,12 @@
 use std::fs::read_to_string;
 
 use chrono::Utc;
-use parsers::pjatk::{ParseRequest, Parser, PjatkClass};
+use db::Model;
+use parsing::{
+    pjatk::{Parser, PjatkClass},
+    types::Class,
+};
 use slog::{info, o};
-use types::Class;
-use utils::Model;
 
 #[derive(serde::Deserialize, Debug)]
 pub struct Config {
@@ -12,6 +14,8 @@ pub struct Config {
     mongodb_uri: String,
 
     admin_id: String,
+
+    pjatk: parsing::manager::Config,
 }
 
 const DB_NAME: &str = "pjatkschedulebot";
@@ -22,108 +26,59 @@ async fn main() -> eyre::Result<()> {
 
     let config: Config = toml::from_str(std::fs::read_to_string(config_file)?.as_ref())?;
 
+    let config = Box::leak(Box::new(config));
+
     let logger = setup_logger();
     info!(logger, "boot");
 
     let mongo_session = mongodb::Client::with_uri_str(&config.mongodb_uri).await?;
     let db = mongo_session.database(DB_NAME);
 
-    let classes_coll: mongodb::Collection<types::Class> = db.collection(&Class::COLLECTION_NAME);
+    let classes_coll: mongodb::Collection<Class> = db.collection(&Class::COLLECTION_NAME);
 
     let mut pjatk = Parser::new();
 
-    let day = pjatk.parse_day(ParseRequest { date: Utc::now() }).await?;
+    let mut manager = parsing::manager::ParserManager::new(&db, pjatk, &config.pjatk, &logger);
 
-    classes_coll.insert_many(day.into_iter()).await?;
+    manager.parse().await?;
 
     Ok(())
 }
 pub mod db {
+    use chrono::TimeDelta;
+    use eyre::OptionExt;
     use mongodb::Collection;
+    use serde::{Deserialize, Serialize};
 
-    use crate::types::Class;
+    use crate::parsing::types::{Class, Group};
 
-    pub async fn replace_day(
-        coll: &Collection<Class>,
-        classes: impl Iterator<Item = Class>,
-    ) -> eyre::Result<()> {
-        Ok(())
+    #[derive(Serialize, Deserialize, Debug, Clone)]
+    pub enum Language {
+        English,
+        Polish,
+        Ukrainian,
     }
-}
-pub mod parsers;
 
-pub mod utils {
-    // a database model
+    #[derive(Serialize, Deserialize, Debug, Clone)]
+    pub struct NotificationConstraint(std::time::Duration);
+
+    #[derive(Serialize, Deserialize, Debug, Clone)]
+    pub struct User {
+        pub id: teloxide::types::ChatId,
+        pub groups: Vec<Group>,
+        pub language: Language,
+        pub constraints: Vec<NotificationConstraint>,
+    }
+
+    impl Model for User {
+        const COLLECTION_NAME: &'static str = "users";
+    }
+
     pub trait Model {
         const COLLECTION_NAME: &'static str;
     }
 }
-pub mod types {
-    #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq)]
-    pub enum ClassKind {
-        Lecture,
-        Seminar,
-        DiplomaThesis,
-    }
-
-    use chrono::{DateTime, Utc};
-
-    use bson::serde_helpers::chrono_datetime_as_bson_datetime;
-    #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq)]
-    pub struct TimeRange {
-        #[serde(with = "chrono_datetime_as_bson_datetime")]
-        pub start: chrono::DateTime<Utc>,
-        #[serde(with = "chrono_datetime_as_bson_datetime")]
-        pub end: chrono::DateTime<Utc>,
-    }
-
-    #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq)]
-    pub enum StudyMode {
-        Online,
-        OnSite,
-        PartTime,
-    }
-    pub enum Language {
-        English,
-        Polish,
-    }
-    #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq)]
-    pub enum Degree {
-        Bachelor,
-        Master,
-        Doctoral,
-    }
-    #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq)]
-    pub enum Semester {
-        Number(u8),
-        Retake,
-    }
-    #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq)]
-    pub struct Group {
-        pub code: String,
-    }
-
-    #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq)]
-    pub enum ClassPlace {
-        Online,
-        OnSite { room: String },
-    }
-
-    #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq)]
-    pub struct Class {
-        pub name: String,
-        pub code: String,
-        pub kind: ClassKind,
-        pub lecturer: String,
-        pub range: TimeRange,
-        pub place: ClassPlace,
-        pub groups: Vec<Group>,
-    }
-
-    impl super::utils::Model for Class {
-        const COLLECTION_NAME: &'static str = "classes";
-    }
-}
+pub mod parsing;
 
 fn setup_logger() -> slog::Logger {
     use sloggers::terminal::{Destination, TerminalLoggerBuilder};
