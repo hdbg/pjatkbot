@@ -9,12 +9,13 @@ use super::types::Class;
 
 const GENERAL_SCHEDULE_ENDPOINT: &'static str = "https://planzajec.pjwstk.edu.pl/PlanOgolny3.aspx";
 
+pub type BacktraceFix = std::backtrace::Backtrace;
 #[derive(thiserror::Error, Debug)]
 pub enum ParseError {
     #[error("HTTP request failed")]
     Http(#[from] reqwest::Error),
     #[error("PJATK has changed their webpage")]
-    ParsingFailed(&'static Location<'static>),
+    ParsingFailed(BacktraceFix),
 }
 
 #[derive(Debug)]
@@ -35,7 +36,7 @@ pub struct PjatkClass {
 
 macro_rules! loc {
     () => {
-        Location::caller()
+        std::backtrace::Backtrace::force_capture()
     };
 }
 
@@ -255,7 +256,10 @@ impl Parser {
         const CLASS_TABLE_SELECTOR: &str = "#ZajeciaTable > tbody";
 
         let class_table_selector = Selector::parse(CLASS_TABLE_SELECTOR).expect("static_selector");
-        let table = hpe!(body.select(&class_table_selector).next());
+        let Some(table) = body.select(&class_table_selector).next() else {
+            return Ok(Vec::default());
+        };
+        println!("{}", "lol2");
 
         const CLASS_ITEM_SELECTOR: &str = "td[id$=\";z\"]"; // every class id ends with ;z
         let class_item_selector = Selector::parse(CLASS_ITEM_SELECTOR).expect("static selector");

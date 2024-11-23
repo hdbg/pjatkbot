@@ -37,13 +37,15 @@ async fn main() -> eyre::Result<()> {
     let classes_coll: mongodb::Collection<Class> = db.collection(&Class::COLLECTION_NAME);
 
     let mut pjatk = Parser::new();
-
     let mut manager = parsing::manager::ParserManager::new(&db, pjatk, &config.pjatk, &logger);
 
     manager.work().await?;
 
     Ok(())
 }
+
+pub mod bot {}
+
 pub mod db {
     use chrono::TimeDelta;
     use eyre::OptionExt;
@@ -52,7 +54,7 @@ pub mod db {
 
     use crate::parsing::types::{Class, Group};
 
-    #[derive(Serialize, Deserialize, Debug, Clone)]
+    #[derive(Serialize, Deserialize, Debug, Clone, strum::EnumString, strum::IntoStaticStr)]
     pub enum Language {
         English,
         Polish,
@@ -63,8 +65,16 @@ pub mod db {
     pub struct NotificationConstraint(std::time::Duration);
 
     #[derive(Serialize, Deserialize, Debug, Clone)]
+    pub enum Role {
+        User,
+        BetaTester,
+        Admin,
+    }
+
+    #[derive(Serialize, Deserialize, Debug, Clone)]
     pub struct User {
         pub id: teloxide::types::ChatId,
+        pub role: Role,
         pub groups: Vec<Group>,
         pub language: Language,
         pub constraints: Vec<NotificationConstraint>,
