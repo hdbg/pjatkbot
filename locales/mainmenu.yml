@@ -9,20 +9,26 @@ greeting.afternoon:
 greeting.evening:
   en: "Good evening!"
 
-lectures.today.ahead.none:
+classes.today.ahead.none:
   en: "You have no lectures left for today."
 
-lectures.today.ahead.some:
+classes.today.ahead.some:
   en: "You have <b>%{count}</b> lectures left for today."
 
-lectures.tomorrow.ahead.none:
+classes.tomorrow.ahead.none:
   en: "You have no lectures for tomorrow."
 
-lectures.tomorrow.ahead.some:
+classes.tomorrow.ahead.some:
   en: "You have <b>%{count}</b> lectures for tomorrow."
 
-lectures.format.short:
-  en: "<pre>%{code}\t- %{from} => %{until} (%{duration_minutes} minutes)</pre>"
+classes.format.short:
+  en: "<pre>%{code} [%{type}]\t- %{from} => %{until} (%{duration_minutes} minutes)</pre>"
+
+classes.type.seminar:
+  en: "Seminar"
+
+classes.type.lecture:
+  en: "Lecture"
 
 
 mainmenu:

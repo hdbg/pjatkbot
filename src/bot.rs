@@ -174,7 +174,7 @@ pub mod user_path {
         let duration = (localized_end - localized_start).num_minutes();
 
         t!(
-            "lectures.format.short",
+            "classes.format.short",
             locale = user.language.code(),
             code = class.code,
             from = start_time,
@@ -185,7 +185,7 @@ pub mod user_path {
     }
 
     fn format_shortform_classes(user: &User, classes: &[Class], kind: &str) -> String {
-        let count_selector = format!("lectures.{kind}.ahead.");
+        let count_selector = format!("classes.{kind}.ahead.");
 
         let count_line = match classes.is_empty() {
             true => t!(count_selector + "none", locale = user.language.code()),
