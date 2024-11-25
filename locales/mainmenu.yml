@@ -10,16 +10,16 @@ greeting.evening:
   en: "Good evening!"
 
 classes.today.ahead.none:
-  en: "You have no lectures left for today."
+  en: "You have no classes left for today."
 
 classes.today.ahead.some:
-  en: "You have <b>%{count}</b> lectures left for today."
+  en: "You have <b>%{count}</b> classes left for today."
 
 classes.tomorrow.ahead.none:
-  en: "You have no lectures for tomorrow."
+  en: "You have no classes for tomorrow."
 
 classes.tomorrow.ahead.some:
-  en: "You have <b>%{count}</b> lectures for tomorrow."
+  en: "You have <b>%{count}</b> classes for tomorrow."
 
 classes.format.short:
   en: "%{code} [%{kind}]\t- %{from} => %{until} (%{duration_minutes} minutes)"
