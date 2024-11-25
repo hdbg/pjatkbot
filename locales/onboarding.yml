@@ -1,0 +1,62 @@
+_version: 2
+
+onboarding.language_en:
+  en: "English"
+onboarding.language_ukr:
+  en: "Українська"
+onboarding.language_pl:
+  en: "Polski"
+onboarding.language_ru:
+  en: "Русский"
+
+onboarding.language.title:
+  en: "Choose your language"
+
+onboarding.notifications:
+  nothing:
+    en: "No notifications"
+    ukr: "Без сповіщень"
+    pl: "Brak powiadomień"
+    ru: "Без уведомлений"
+  _10mins:
+    en: "10 minutes before"
+    ukr: "За 10 хвилин"
+    pl: "10 minut przed"
+    ru: "За 10 минут"
+  _30mins:
+    en: "30 minutes before"
+    ukr: "За 30 хвилин"
+    pl: "30 minut przed"
+    ru: "За 30 минут"
+  _1hour:
+    en: "1 hour before"
+    ukr: "За 1 годину"
+    pl: "1 godzinę przed"
+    ru: "За 1 час"
+  _2hours:
+    en: "2 hours before"
+    ukr: "За 2 години"
+    pl: "2 godziny przed"
+    ru: "За 2 часа"
+
+onboarding.notifications.prompt:
+  en: "Would you like to receive notifications about your classes?"
+  ukr: "Бажаєте отримувати сповіщення про ваші заняття?"
+  pl: "Czy chcesz otrzymywać powiadomienia o swoich zajęciach?"
+  ru: "Хотите получать уведомления о ваших занятиях?"
+
+onboarding.groups:
+  prompt:
+    en: "Please, enter your groups. \n\n You can find them in your personal timetable at bottom left corner (guide link).\n Enter each groups on a new line."
+    ukr: "Будь ласка, введіть ваші групи. \n\n Ви можете знайти їх у вашому персональному розкладі в лівому нижньому кутку (посилання на інструкцію).\n Введіть кожну групу на новому рядку."
+    pl: "Proszę wprowadź swoje grupy. \n\n Możesz znaleźć je w swoim osobistym harmonogramie w lewym dolnym rogu (link do przewodnika).\n Wprowadź każdą grupę w nowym wierszu."
+    ru: "Пожалуйста, введите ваши группы. \n\n Вы можете найти их в вашем персональном расписании в левом нижнем углу (ссылка на руководство).\n Введите каждую группу на новой строке."
+  error:
+    en: "Group %{group} is not found. Please, check your input."
+    ukr: "Групу %{group} не знайдено. Будь ласка, перевірте ваш ввід."
+    pl: "Grupa %{group} nie została znaleziona. Sprawdź swoje dane."
+    ru: "Группу %{group} не найдено. Пожалуйста, проверьте правильность ввода."
+
+  
+
+  

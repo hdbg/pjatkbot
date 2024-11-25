@@ -1,0 +1,8 @@
+_version: 2
+
+mainmenu:
+  content:
+    en: "idi nahui"
+    ukr: "idi nahui, but in ukrainian"
+    pl: "idi nahui, but in polish"
+    ru: "idi nahui, but in russian"
