@@ -135,12 +135,18 @@ pub mod user_path {
 
     pub mod user_onboard_dialog;
 
+    use crate::BOT_TIMEZONE;
+
     async fn select_classes_for_user_and_date(
         date: &DateTime<Utc>,
         user: &User,
         state: &BotState,
         start_point: Option<DateTime<Utc>>,
     ) -> eyre::Result<Vec<Class>> {
+        // fix for considering days in user's timezone
+        let date = date.with_timezone(&BOT_TIMEZONE);
+        let start_point = start_point.map(|date| date.with_timezone(&BOT_TIMEZONE));
+
         let mut final_query = mongodb::bson::Document::default();
 
         let group_constraints: Vec<_> = user
@@ -173,13 +179,16 @@ pub mod user_path {
 
         let duration = (localized_end - localized_start).num_minutes();
 
+        let kind = format!("classes.type.{}", class.kind.to_string());
+        let kind = t!(kind, locale = user.language.code());
         t!(
             "classes.format.short",
             locale = user.language.code(),
             code = class.code,
             from = start_time,
             until = end_time,
-            duration_minutes = duration
+            duration_minutes = duration,
+            kind = kind
         )
         .to_string()
     }
@@ -200,10 +209,10 @@ pub mod user_path {
             .iter()
             .map(|class| format_shortform_class(user, class))
             .fold(String::new(), |accum, current| {
-                format!("{accum}\n{current}")
+                format!("{accum}{current}\n")
             });
 
-        format!("{count_line}\n{class_list}")
+        format!("{count_line}\n<pre>{class_list}</pre>")
     }
 
     async fn format_mainmenu(bot_state: &BotState, user: &User) -> eyre::Result<String> {

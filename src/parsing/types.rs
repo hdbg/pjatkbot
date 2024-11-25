@@ -1,7 +1,21 @@
-#[derive(Debug, Hash, serde::Serialize, serde::Deserialize, Clone, PartialEq, Eq)]
+#[derive(
+    Debug,
+    Hash,
+    serde::Serialize,
+    serde::Deserialize,
+    Clone,
+    PartialEq,
+    Eq,
+    strum::Display,
+    strum::IntoStaticStr,
+    strum::EnumString,
+)]
 pub enum ClassKind {
+    #[strum(serialize = "lecture")]
     Lecture,
+    #[strum(serialize = "seminar")]
     Seminar,
+    #[strum(serialize = "diploma_thesis")]
     DiplomaThesis,
 }
 
@@ -27,17 +41,6 @@ pub enum StudyMode {
 pub enum Language {
     English,
     Polish,
-}
-#[derive(Debug, Hash, serde::Serialize, serde::Deserialize, Clone, PartialEq, Eq)]
-pub enum Degree {
-    Bachelor,
-    Master,
-    Doctoral,
-}
-#[derive(Debug, Hash, serde::Serialize, serde::Deserialize, Clone, PartialEq, Eq)]
-pub enum Semester {
-    Number(u8),
-    Retake,
 }
 #[derive(Debug, Hash, serde::Serialize, serde::Deserialize, Clone, PartialEq, Eq)]
 pub struct Group {

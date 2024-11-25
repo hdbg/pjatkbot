@@ -22,12 +22,15 @@ classes.tomorrow.ahead.some:
   en: "You have <b>%{count}</b> lectures for tomorrow."
 
 classes.format.short:
-  en: "<pre>%{code} [%{type}]\t- %{from} => %{until} (%{duration_minutes} minutes)</pre>"
+  en: "%{code} [%{kind}]\t- %{from} => %{until} (%{duration_minutes} minutes)"
 
 classes.type.seminar:
   en: "Seminar"
 
 classes.type.lecture:
+  en: "Lecture"
+
+classes.type.diploma_thesis:
   en: "Lecture"
 
 

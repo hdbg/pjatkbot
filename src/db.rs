@@ -1,4 +1,4 @@
-use chrono::{DateTime, NaiveTime, TimeDelta, Utc};
+use chrono::{DateTime, NaiveTime, TimeDelta, TimeZone, Utc};
 use eyre::OptionExt;
 use mongodb::Collection;
 use serde::{Deserialize, Serialize};
@@ -63,9 +63,9 @@ pub trait Model {
 }
 const DB_NAME: &str = "pjatkschedulebot";
 
-pub fn create_range_query(
-    date: &DateTime<Utc>,
-    start_point: Option<DateTime<Utc>>,
+pub fn create_range_query<T: TimeZone>(
+    date: &DateTime<T>,
+    start_point: Option<DateTime<T>>,
 ) -> mongodb::bson::Document {
     let end = date
         .with_time(NaiveTime::from_hms_opt(23, 59, 59).unwrap())
