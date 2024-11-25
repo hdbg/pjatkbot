@@ -259,7 +259,6 @@ impl Parser {
         let Some(table) = body.select(&class_table_selector).next() else {
             return Ok(Vec::default());
         };
-        println!("{}", "lol2");
 
         const CLASS_ITEM_SELECTOR: &str = "td[id$=\";z\"]"; // every class id ends with ;z
         let class_item_selector = Selector::parse(CLASS_ITEM_SELECTOR).expect("static selector");

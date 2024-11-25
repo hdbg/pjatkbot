@@ -114,7 +114,6 @@ pub async fn entrypoint(
     dialogue: BotDialogue<Stages>,
     state: Arc<BotState>,
 ) -> super::HandlerResult {
-    println!("{:#?}", format_languages_keyboard());
     bot.send_message(user_id, t!("onboarding.language.title", locale = "en"))
         .reply_markup(format_languages_keyboard())
         .await?;
@@ -186,7 +185,7 @@ mod handlers {
     };
 
     use crate::{
-        bot::{BotDialogue, BotState, HandlerResult},
+        bot::{self, BotDialogue, BotState, HandlerResult},
         db::{self, Language},
         parsing::types::Group,
     };
@@ -277,6 +276,7 @@ mod handlers {
     }
 
     pub async fn handle_notifications_choice(
+        bot: Bot,
         (groups, language): (Vec<Group>, Language),
         state: Arc<BotState>,
         answer: CallbackQuery,
@@ -297,20 +297,20 @@ mod handlers {
             None => vec![],
         };
 
-        state
-            .users_coll
-            .insert_one(db::User {
-                id: answer.from.id.into(),
-                role: db::Role::User,
-                groups,
-                language,
-                constraints,
-            })
-            .await?;
+        let new_user = db::User {
+            id: answer.from.id.into(),
+            role: db::Role::User,
+            groups,
+            language,
+            constraints,
+        };
+        state.users_coll.insert_one(new_user.clone()).await?;
 
         slog::info!(state.logger, "onboard.succ_registered"; "userid" => ?answer.from.id);
 
         dialogue.exit().await?;
+
+        bot::user_path::main_menu(bot, state, new_user).await?;
 
         Ok(())
     }

@@ -1,8 +1,47 @@
 _version: 2
 
+greeting.morning:
+  en: "Good morning!"
+
+greeting.afternoon:
+  en: "Good day!"
+
+greeting.evening:
+  en: "Good evening!"
+
+lectures.today.ahead.none:
+  en: "You have no lectures left for today."
+
+lectures.today.ahead.some:
+  en: "You have <b>%{count}</b> lectures left for today."
+
+lectures.tomorrow.ahead.none:
+  en: "You have no lectures for tomorrow."
+
+lectures.tomorrow.ahead.some:
+  en: "You have <b>%{count}</b> lectures for tomorrow."
+
+lectures.format.short:
+  en: "<pre>%{code}\t- %{from} => %{until} (%{duration_minutes} minutes)</pre>"
+
+
 mainmenu:
   content:
-    en: "idi nahui"
-    ukr: "idi nahui, but in ukrainian"
-    pl: "idi nahui, but in polish"
-    ru: "idi nahui, but in russian"
+    en: |
+      <b>PJATK Schedule</b>
+      %{greeting}
+
+      <b>Today</b>
+      %{lectures_today}
+      <b>Tommorow</b>
+      %{lectures_tomorrow}
+      
+      
+    ukr: |
+      <b>PJATK Рокзлад</b>
+      %{greeting}
+
+      <b>На сьогодні</b>
+      %{lectures_today}
+      <b>На завтра</b>
+      %{lectures_tomorrow}

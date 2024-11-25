@@ -7,14 +7,15 @@ pub mod parsing;
 #[macro_use]
 extern crate rust_i18n;
 
-i18n!();
-
 #[derive(serde::Deserialize, Debug)]
 pub struct Config {
     mongodb_uri: String,
     pjatk: parsing::manager::Config,
     telegram: bot::BotConfig,
 }
+
+const BOT_TIMEZONE: chrono_tz::Tz = chrono_tz::Europe::Warsaw;
+i18n!();
 
 #[tokio::main]
 async fn main() -> eyre::Result<()> {

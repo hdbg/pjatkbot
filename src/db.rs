@@ -1,4 +1,4 @@
-use chrono::TimeDelta;
+use chrono::{DateTime, NaiveTime, TimeDelta, Utc};
 use eyre::OptionExt;
 use mongodb::Collection;
 use serde::{Deserialize, Serialize};
@@ -62,6 +62,19 @@ pub trait Model {
     const COLLECTION_NAME: &'static str;
 }
 const DB_NAME: &str = "pjatkschedulebot";
+
+pub fn create_range_query(
+    date: &DateTime<Utc>,
+    start_point: Option<DateTime<Utc>>,
+) -> mongodb::bson::Document {
+    let end = date
+        .with_time(NaiveTime::from_hms_opt(23, 59, 59).unwrap())
+        .unwrap();
+
+    let start_point = start_point.unwrap_or_else(|| date.with_time(NaiveTime::MIN).unwrap());
+
+    mongodb::bson::doc! {"range.start": {"$gt": bson::DateTime::from(start_point), "$lt": bson::DateTime::from(end)}}
+}
 
 pub async fn load_database(config: &Config) -> eyre::Result<mongodb::Database> {
     let mongo_session = mongodb::Client::with_uri_str(&config.mongodb_uri).await?;
