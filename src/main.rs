@@ -33,41 +33,6 @@ pub struct Config {
 
 const DB_NAME: &str = "pjatkschedulebot";
 
-fn setup_bot(
-    config: &'static Config,
-    logger: &Logger,
-    db: &mongodb::Database,
-) -> Dispatcher<Bot, eyre::Report, DefaultKey> {
-    let users_coll = db.collection(&User::COLLECTION_NAME);
-    let classes_coll = db.collection(&Class::COLLECTION_NAME);
-
-    let logger = logger.new(slog::o!("subsystem" => "bot"));
-
-    let bot = Bot::new(config.telegram.bot_token.clone());
-
-    let state = Arc::new(bot::BotState {
-        config: &config.telegram,
-        users_coll,
-        classes_coll,
-        logger,
-    });
-
-    let mut dependencies = dptree::deps![state];
-    dependencies.insert_container(bot::user_onboard_dialog::deps());
-
-    Dispatcher::builder(
-        bot,
-        dptree::entry()
-            // NOTE: this currently limits event handling only to users interactions
-            // in case some other updates are required, the following line should be removed
-            .filter_map(|update: Update| update.chat_id())
-            .branch(bot::user_onboard_dialog::handler()),
-    )
-    .enable_ctrlc_handler()
-    .dependencies(dependencies)
-    .build()
-}
-
 #[tokio::main]
 async fn main() -> eyre::Result<()> {
     let logger = setup_logger();
@@ -83,7 +48,7 @@ async fn main() -> eyre::Result<()> {
 
     // let handle = manager.work(futures::sink::drain());
 
-    let mut bot = setup_bot(config, &logger, &db);
+    let mut bot = bot::setup_bot(config, &logger, &db);
 
     bot.dispatch().await;
 
@@ -95,11 +60,24 @@ async fn main() -> eyre::Result<()> {
 pub mod bot {
     use std::sync::Arc;
 
+    use dptree::filter_async;
     use mongodb::Collection;
     use slog::Logger;
-    use teloxide::{dispatching::dialogue::InMemStorage, prelude::*};
+    use teloxide::{
+        dispatching::{
+            dialogue::{GetChatId, InMemStorage},
+            DefaultKey,
+        },
+        prelude::*,
+    };
 
-    use crate::{db::User, parsing::types::Class};
+    use crate::{
+        db::{Model, User},
+        parsing::types::Class,
+        Config,
+    };
+
+    pub mod utils;
 
     #[derive(serde::Serialize, serde::Deserialize, Debug)]
     pub struct BotConfig {
@@ -124,40 +102,70 @@ pub mod bot {
         InMemStorage::new()
     }
 
-    // a.k.a. bot subsystem
-    pub trait HandlePath {
-        fn create_handler_tree() -> teloxide::dispatching::UpdateHandler<eyre::Report>;
-        fn insert_deps(map: &mut DependencyMap) {}
+    pub fn setup_bot(
+        config: &'static Config,
+        logger: &Logger,
+        db: &mongodb::Database,
+    ) -> Dispatcher<Bot, eyre::Report, DefaultKey> {
+        let users_coll = db.collection(&User::COLLECTION_NAME);
+        let classes_coll = db.collection(&Class::COLLECTION_NAME);
+
+        let logger = logger.new(slog::o!("subsystem" => "bot"));
+
+        let bot = Bot::new(config.telegram.bot_token.clone());
+
+        let state = Arc::new(BotState {
+            config: &config.telegram,
+            users_coll,
+            classes_coll,
+            logger,
+        });
+
+        let mut dependencies = dptree::deps![state.clone()];
+        dependencies.insert_container(user_path::user_onboard_dialog::deps());
+
+        Dispatcher::builder(
+            bot,
+            dptree::entry()
+                // NOTE: this currently limits event handling only to users interactions
+                // in case some other updates are required, the following line should be removed
+                .filter_map(|update: Update| update.chat_id())
+                .branch(dptree::filter_map_async(
+                    |id: ChatId, state: Arc<BotState>| async move {
+                        // check if user is registered
+                        let user_query = mongodb::bson::doc! {"id": id.0};
+
+                        match state.users_coll.find_one(user_query).await {
+                            Ok(result) => result,
+                            Err(err) => {
+                                slog::error!(state.logger, "reg_check.error"; "err" => ?err);
+                                None
+                            }
+                        }
+                    },
+                ))
+                .branch(user_path::user_onboard_dialog::handler()),
+        )
+        .enable_ctrlc_handler()
+        .dependencies(dependencies)
+        .build()
     }
 
-    async fn main_menu(bot: Bot, bot_state: Arc<BotState>, user: User) -> HandlerResult {
-        todo!()
-    }
+    pub mod user_path {
+        use std::sync::Arc;
 
-    pub mod utils {
-        use teloxide::{dispatching::dialogue::GetChatId, prelude::Requester, types::Message, Bot};
+        use teloxide::Bot;
 
-        pub async fn send_disappering_message<'bot, Ret, Func>(
-            bot: &'bot Bot,
-            wait_delay: std::time::Duration,
-            functor: Func,
-        ) -> super::HandlerResult
-        where
-            Ret: std::future::Future<Output = eyre::Result<Message>> + 'bot,
-            Func: FnOnce(&'bot Bot) -> Ret,
-        {
-            let sent_message = functor(bot).await?;
+        use crate::db::User;
 
-            tokio::time::sleep(wait_delay).await;
+        use super::{BotState, HandlerResult};
 
-            bot.delete_message(sent_message.chat.id, sent_message.id)
-                .await?;
+        pub mod user_onboard_dialog;
 
-            Ok(())
+        async fn main_menu(bot: Bot, bot_state: Arc<BotState>, user: User) -> HandlerResult {
+            todo!()
         }
     }
-
-    pub mod user_onboard_dialog;
 }
 
 pub mod db {

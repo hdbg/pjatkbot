@@ -1,30 +1,21 @@
-use std::{any::Any, str::FromStr, sync::Arc};
+use std::sync::Arc;
 
-use eyre::OptionExt;
 use rust_i18n::t;
-use slog::Logger;
 use strum::IntoEnumIterator;
 use teloxide::{
-    dispatching::{
-        dialogue::{GetChatId, InMemStorage},
-        HandlerExt, UpdateFilterExt, UpdateHandler,
-    },
+    dispatching::{HandlerExt, UpdateFilterExt, UpdateHandler},
     dptree,
-    payloads::{EditMessageTextSetters, SendMessageSetters},
+    payloads::SendMessageSetters,
     prelude::{DependencyMap, Requester},
-    types::{
-        CallbackQuery, ChatId, InlineKeyboardButton, InlineKeyboardMarkup,
-        MaybeInaccessibleMessage, Message, MessageId, ReplyMarkup, Update, UserId,
-    },
+    types::{ChatId, InlineKeyboardButton, InlineKeyboardMarkup, Update},
     Bot,
 };
 
 use crate::{
+    bot::{create_storage, BotDialogue, BotState, DialogueStorage},
     db::{Language, NotificationConstraint},
     parsing::types::Group,
 };
-
-use super::{BotDialogue, BotState, HandlerResult};
 
 #[derive(strum::EnumIter, strum::Display, strum::EnumString, Clone)]
 pub enum Notification {
@@ -66,21 +57,16 @@ pub enum Stages {
         groups: Vec<Group>,
         language: Language,
     },
-    // ReceivedNotification {
-    //     language: Language,
-    //     groups: Vec<Group>,
-    //     notifications: Notification,
-    // },
 }
 
 pub fn deps() -> DependencyMap {
-    teloxide::dptree::deps![super::create_storage::<Stages>()]
+    teloxide::dptree::deps![create_storage::<Stages>()]
 }
 
 #[rustfmt::skip]
     pub fn handler() -> UpdateHandler<eyre::Report> {
         dptree::entry()
-            .enter_dialogue::<Update, super::DialogueStorage<Stages>, Stages>()
+            .enter_dialogue::<Update, DialogueStorage<Stages>, Stages>()
             .branch(
                 Update::filter_callback_query()
                     .branch(dptree::case![Stages::WaitingForLanguage].endpoint(handlers::handle_language_selection))
@@ -125,7 +111,7 @@ fn format_languages_keyboard() -> InlineKeyboardMarkup {
 pub async fn entrypoint(
     bot: Bot,
     user_id: ChatId,
-    dialogue: super::BotDialogue<Stages>,
+    dialogue: BotDialogue<Stages>,
     state: Arc<BotState>,
 ) -> super::HandlerResult {
     println!("{:#?}", format_languages_keyboard());
@@ -150,7 +136,7 @@ mod senders {
 
     use crate::{bot::HandlerResult, db::Language};
 
-    use super::{format_languages_keyboard, format_notifications_keyboard, Stages};
+    use super::format_notifications_keyboard;
 
     pub async fn send_groups_selection(
         bot: Bot,
@@ -200,21 +186,21 @@ mod handlers {
     };
 
     use crate::{
-        bot::{utils::send_disappering_message, BotDialogue, BotState, HandlerResult},
+        bot::{BotDialogue, BotState, HandlerResult},
         db::{self, Language},
         parsing::types::Group,
     };
 
     use super::{senders, Notification, Stages};
 
+    type Type = HandlerResult;
+
     pub async fn handle_language_selection(
         bot: Bot,
         state: Arc<BotState>,
         answer: CallbackQuery,
         dialogue: BotDialogue<Stages>,
-    ) -> super::HandlerResult {
-        println!("loool");
-        // let logger = Logger::new(&state.logger, slog::o!())
+    ) -> Type {
         let Some(callback_data) = answer.data else {
             slog::warn!(state.logger, "onboarding.handle_language_selection"; "error" => "received language selection answer without callback");
             return Ok(());
@@ -246,7 +232,7 @@ mod handlers {
         state: Arc<BotState>,
         message: Message,
         language: Language,
-    ) -> super::HandlerResult {
+    ) -> HandlerResult {
         let Some(msg_text) = message.text() else {
             bot.send_message(message.chat.id, "Internal error").await?;
             return Ok(());
