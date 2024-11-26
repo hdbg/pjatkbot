@@ -184,7 +184,7 @@ pub mod user_path {
         t!(
             "classes.format.short",
             locale = user.language.code(),
-            code = class.code,
+            code = format!("{:<4}", class.code),
             from = start_time,
             until = end_time,
             duration_minutes = duration,
