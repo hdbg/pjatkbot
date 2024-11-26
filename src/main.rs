@@ -2,6 +2,7 @@ use parsing::pjatk::Parser;
 
 pub mod bot;
 pub mod db;
+pub mod notifications;
 pub mod parsing;
 
 #[macro_use]

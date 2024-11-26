@@ -152,7 +152,7 @@ pub mod user_path {
         let group_constraints: Vec<_> = user
             .groups
             .iter()
-            .map(|group| doc! {"groups.code": &group.code})
+            .map(|group| doc! {"groups": &group.code})
             .collect();
         final_query.extend(crate::db::create_range_query(&date, start_point).into_iter());
         final_query.extend(doc! {"$or": group_constraints}.into_iter());

@@ -232,12 +232,17 @@ pub async fn replace_or_fill_day(
     let db_stored_classes_query = doc! {"range.start": {"$gt": bson::DateTime::from(min_class_start), "$lt": bson::DateTime::from(max_class_end)}};
     let mut db_classes = coll.find(db_stored_classes_query).await?;
     let mut db_classes_set = HashSet::new();
+
     while let Some(class) = db_classes.next().await {
         db_classes_set.insert(class?);
     }
+
+    let mut session = coll.client().start_session().await?;
+    session.start_transaction().await?;
+
     // optimization to handle case when it's a new day parsed
     if db_classes_set.is_empty() {
-        coll.insert_many(classes).await?;
+        coll.insert_many(classes).session(&mut session).await?;
         return Ok(delta);
     }
 
@@ -248,6 +253,7 @@ pub async fn replace_or_fill_day(
     let diff_to_insert: Vec<_> = diff_to_insert.collect();
     if !diff_to_insert.is_empty() {
         coll.insert_many(diff_to_insert.into_iter().cloned())
+            .session(&mut session)
             .await?;
     }
 
@@ -255,9 +261,12 @@ pub async fn replace_or_fill_day(
 
     for class in diff_to_remove.into_iter() {
         coll.find_one_and_delete(mongodb::bson::to_document(class)?)
+            .session(&mut session)
             .await?;
         removed_classes.push(class.clone());
     }
+
+    session.commit_transaction().await?;
 
     Ok(delta)
 }

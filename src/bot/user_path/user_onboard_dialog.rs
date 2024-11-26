@@ -247,7 +247,7 @@ mod handlers {
 
         // check if such groups exist
         for group in group_chunks.iter() {
-            let class_test_query = doc! {"groups.code": &group.code};
+            let class_test_query = doc! {"groups": &group.code};
             let query = state.classes_coll.find_one(class_test_query).await?;
 
             if query.is_none() {
