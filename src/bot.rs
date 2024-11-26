@@ -141,11 +141,11 @@ pub mod user_path {
         date: &DateTime<Utc>,
         user: &User,
         state: &BotState,
-        start_point: Option<DateTime<Utc>>,
+        end_point: Option<DateTime<Utc>>,
     ) -> eyre::Result<Vec<Class>> {
         // fix for considering days in user's timezone
         let date = date.with_timezone(&BOT_TIMEZONE);
-        let start_point = start_point.map(|date| date.with_timezone(&BOT_TIMEZONE));
+        let start_point = end_point.map(|date| date.with_timezone(&BOT_TIMEZONE));
 
         let mut final_query = mongodb::bson::Document::default();
 
@@ -177,7 +177,12 @@ pub mod user_path {
         let start_time = localized_start.time().format("%H:%M").to_string();
         let end_time = localized_end.time().format("%H:%M").to_string();
 
-        let duration = (localized_end - localized_start).num_minutes();
+        let place = match &class.place {
+            crate::parsing::types::ClassPlace::Online => {
+                t!("classes.place.online", locale = user.language.code()).to_string()
+            }
+            crate::parsing::types::ClassPlace::OnSite { room } => room.trim().to_owned(),
+        };
 
         let kind = format!("classes.type.{}", class.kind.to_string());
         let kind = t!(kind, locale = user.language.code());
@@ -187,8 +192,8 @@ pub mod user_path {
             code = format!("{:<4}", class.code),
             from = start_time,
             until = end_time,
-            duration_minutes = duration,
-            kind = kind
+            kind = kind,
+            place = format!("{:<7}", "(".to_owned() + &place + ")")
         )
         .to_string()
     }

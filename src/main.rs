@@ -10,6 +10,7 @@ extern crate rust_i18n;
 #[derive(serde::Deserialize, Debug)]
 pub struct Config {
     mongodb_uri: String,
+    database_name: String,
     pjatk: parsing::manager::Config,
     telegram: bot::BotConfig,
 }
@@ -30,13 +31,13 @@ async fn main() -> eyre::Result<()> {
     let mut pjatk = Parser::new();
     let mut manager = parsing::manager::ParserManager::new(&db, pjatk, &config.pjatk, &logger);
 
-    // let handle = manager.work(futures::sink::drain());
+    let handle = manager.work(futures::sink::drain());
 
     let mut bot = bot::setup_bot(config, &logger, &db);
 
     bot.dispatch().await;
 
-    // handle.abort();
+    handle.abort();
 
     Ok(())
 }

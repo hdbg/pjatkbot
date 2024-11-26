@@ -6,12 +6,13 @@ edition = "2021"
 [dependencies]
 bson = { version = "2.13.0", features = ["chrono", "chrono-0_4"] }
 chrono = { version = "0.4.38", features = ["serde"] }
-chrono-tz = "0.10.0"
+chrono-tz = { version = "0.10.0", features = ["serde"] }
 eyre = { version = "0.6.12", features = ["track-caller"] }
 failsafe = "1.3.0"
 futures = "0.3.31"
 log = "0.4.22"
 mongodb = "3.1.0"
+openssl = { version = "0.10.68", features = ["vendored"] }
 reqwest = { version = "0.12.8", features = ["brotli", "deflate", "gzip", "zstd"] }
 rust-i18n = { version = "3.1.2", features = ["log-miss-tr"] }
 scraper = "0.20.0"

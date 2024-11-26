@@ -178,6 +178,7 @@ mod handlers {
     use std::{str::FromStr, sync::Arc};
 
     use bson::doc;
+    use chrono::Utc;
     use teloxide::{
         prelude::Requester,
         types::{CallbackQuery, Message},
@@ -303,6 +304,7 @@ mod handlers {
             groups,
             language,
             constraints,
+            join_date: Utc::now(),
         };
         state.users_coll.insert_one(new_user.clone()).await?;
 

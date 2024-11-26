@@ -184,7 +184,7 @@ impl<Parser: ScheduleParser> ParserManager<Parser> {
 
                 match result {
                     Ok(delta) if !delta.removed_classes.is_empty() => {
-                        slog::info!(self.logger, "parser.got_removed_classes");
+                        slog::info!(self.logger, "parser.got_removed_classes"; "removed_list" => ?delta.removed_classes);
                         if delta_consumer.send(delta).await.is_err() {
                             slog::error!(self.logger, "parser.delta_channel_err");
                         }
@@ -245,10 +245,11 @@ pub async fn replace_or_fill_day(
 
     let diff_to_insert = new_classes_set.difference(&db_classes_set);
 
-    // no need to do check, because if peek failed,
-    // then there are no classes
-    coll.insert_many(diff_to_insert.into_iter().cloned())
-        .await?;
+    let diff_to_insert: Vec<_> = diff_to_insert.collect();
+    if !diff_to_insert.is_empty() {
+        coll.insert_many(diff_to_insert.into_iter().cloned())
+            .await?;
+    }
 
     let diff_to_remove = db_classes_set.difference(&new_classes_set);
 

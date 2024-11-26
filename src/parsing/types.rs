@@ -43,11 +43,13 @@ pub enum Language {
     Polish,
 }
 #[derive(Debug, Hash, serde::Serialize, serde::Deserialize, Clone, PartialEq, Eq)]
+#[serde(transparent)]
 pub struct Group {
     pub code: String,
 }
 
 #[derive(Debug, Hash, serde::Serialize, serde::Deserialize, Clone, PartialEq, Eq)]
+#[serde(tag = "type")]
 pub enum ClassPlace {
     Online,
     OnSite { room: String },

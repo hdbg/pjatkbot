@@ -1,4 +1,5 @@
 use chrono::{DateTime, NaiveTime, TimeDelta, TimeZone, Utc};
+use chrono_tz::Tz;
 use eyre::OptionExt;
 use mongodb::Collection;
 use serde::{Deserialize, Serialize};
@@ -44,10 +45,13 @@ pub enum Role {
     BetaTester,
     Admin,
 }
+use bson::serde_helpers::chrono_datetime_as_bson_datetime;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct User {
     pub id: teloxide::types::ChatId,
+    #[serde(with = "chrono_datetime_as_bson_datetime")]
+    pub join_date: DateTime<Utc>,
     pub role: Role,
     pub groups: Vec<Group>,
     pub language: Language,
@@ -61,24 +65,23 @@ impl Model for User {
 pub trait Model {
     const COLLECTION_NAME: &'static str;
 }
-const DB_NAME: &str = "pjatkschedulebot";
 
 pub fn create_range_query<T: TimeZone>(
     date: &DateTime<T>,
-    start_point: Option<DateTime<T>>,
+    end_point: Option<DateTime<T>>,
 ) -> mongodb::bson::Document {
     let end = date
         .with_time(NaiveTime::from_hms_opt(23, 59, 59).unwrap())
         .unwrap();
 
-    let start_point = start_point.unwrap_or_else(|| date.with_time(NaiveTime::MIN).unwrap());
+    let start_point = end_point.unwrap_or_else(|| date.with_time(NaiveTime::MIN).unwrap());
 
     mongodb::bson::doc! {"range.start": {"$gt": bson::DateTime::from(start_point), "$lt": bson::DateTime::from(end)}}
 }
 
 pub async fn load_database(config: &Config) -> eyre::Result<mongodb::Database> {
     let mongo_session = mongodb::Client::with_uri_str(&config.mongodb_uri).await?;
-    let db = mongo_session.database(DB_NAME);
+    let db = mongo_session.database(&config.database_name);
 
     Ok(db)
 }
