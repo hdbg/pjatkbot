@@ -1,3 +1,5 @@
+use std::{collections::HashSet, hash::Hash};
+
 use chrono::{DateTime, NaiveTime, TimeDelta, TimeZone, Utc};
 use chrono_tz::Tz;
 use eyre::OptionExt;
@@ -36,7 +38,7 @@ impl Language {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct NotificationConstraint(pub std::time::Duration);
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -45,17 +47,62 @@ pub enum Role {
     BetaTester,
     Admin,
 }
-use bson::serde_helpers::chrono_datetime_as_bson_datetime;
+use bson::{oid::ObjectId, serde_helpers::chrono_datetime_as_bson_datetime};
 
+pub type UserID = teloxide::types::ChatId;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct User {
-    pub id: teloxide::types::ChatId,
+    #[serde(rename = "id")]
+    pub telegram_id: UserID,
     #[serde(with = "chrono_datetime_as_bson_datetime")]
     pub join_date: DateTime<Utc>,
     pub role: Role,
     pub groups: Vec<Group>,
     pub language: Language,
-    pub constraints: Vec<NotificationConstraint>,
+    pub constraints: HashSet<NotificationConstraint>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Notification {
+    pub related_user: ObjectId,
+    pub related_class: ObjectId,
+    pub related_user_id: UserID,
+    #[serde(with = "chrono_datetime_as_bson_datetime")]
+    pub fire_date: DateTime<Utc>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ExpandedNotification {
+    pub related_user: ObjectId,
+    pub related_class: ObjectId,
+    #[serde(with = "chrono_datetime_as_bson_datetime")]
+    pub fire_date: DateTime<Utc>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct OID<T> {
+    #[serde(rename = "_id")]
+    pub id: ObjectId,
+
+    #[serde(flatten)]
+    pub data: T,
+}
+
+impl<T: Hash> Hash for OID<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.data.hash(state)
+    }
+}
+impl<T: PartialEq> PartialEq for OID<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.data.eq(&other.data)
+    }
+}
+impl<T: Eq> Eq for OID<T> {}
+
+pub type OIDCollection<T> = Collection<OID<T>>;
+impl Model for Notification {
+    const COLLECTION_NAME: &'static str = "notifications";
 }
 
 impl Model for User {

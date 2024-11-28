@@ -175,7 +175,7 @@ mod senders {
 }
 
 mod handlers {
-    use std::{str::FromStr, sync::Arc};
+    use std::{collections::HashSet, str::FromStr, sync::Arc};
 
     use bson::doc;
     use chrono::Utc;
@@ -294,12 +294,16 @@ mod handlers {
         };
 
         let constraints = match notification_choice.constraint() {
-            Some(constraint) => vec![constraint],
-            None => vec![],
+            Some(constraint) => {
+                let mut set = HashSet::default();
+                set.insert(constraint);
+                set
+            }
+            None => HashSet::default(),
         };
 
         let new_user = db::User {
-            id: answer.from.id.into(),
+            telegram_id: answer.from.id.into(),
             role: db::Role::User,
             groups,
             language,
@@ -312,7 +316,7 @@ mod handlers {
 
         dialogue.exit().await?;
 
-        bot::user_path::main_menu(bot, state, new_user).await?;
+        bot::gui::main_menu(bot, state, new_user).await?;
 
         Ok(())
     }

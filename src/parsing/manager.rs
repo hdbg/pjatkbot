@@ -1,20 +1,26 @@
 use std::{collections::HashSet, convert::Infallible, hash::RandomState};
 
-use bson::doc;
+use bson::{doc, oid::ObjectId};
 use chrono::{NaiveDate, NaiveTime, TimeDelta, Utc};
 
 use futures::{Sink, SinkExt, StreamExt};
 use mongodb::Collection;
 use serde::Serialize;
 use slog::Logger;
+use smallvec::SmallVec;
 
-use crate::db::Model;
+use crate::{
+    channels,
+    db::{Model, OIDCollection, OID},
+    notifications::UpdateEvent,
+};
 
 use super::{types::Class, ScheduleParser};
 
 #[derive(Debug, Default)]
 pub struct ClassDelta {
-    pub removed_classes: Vec<Class>,
+    pub added_classes: Vec<OID<Class>>,
+    pub removed_classes: Vec<OID<Class>>,
 }
 
 #[derive(serde::Deserialize, Debug)]
@@ -137,6 +143,10 @@ impl<Parser: ScheduleParser> ParserManager<Parser> {
 
         let next_date_reparse = data
             .last_day_reparsed
+            .filter(|last_reparsed| {
+                last_reparsed
+                    < &(Utc::now().date_naive() + TimeDelta::days(self.config.days_ahead as i64))
+            })
             .map(|last_reparsed| last_reparsed + TimeDelta::days(1))
             .unwrap_or(today);
 
@@ -176,19 +186,40 @@ impl<Parser: ScheduleParser> ParserManager<Parser> {
 
     pub fn work(
         mut self,
-        mut delta_consumer: impl Sink<ClassDelta> + Unpin + Send + 'static,
+        events_consumer: impl channels::Tx<crate::notifications::UpdateEvents>,
     ) -> tokio::task::JoinHandle<eyre::Result<Infallible>> {
         let fut = async move {
             loop {
                 let result = self.parse_next().await;
 
                 match result {
-                    Ok(delta) if !delta.removed_classes.is_empty() => {
-                        slog::info!(self.logger, "parser.got_removed_classes"; "removed_list" => ?delta.removed_classes);
-                        if delta_consumer.send(delta).await.is_err() {
+                    Ok(delta) => {
+                        slog::info!(self.logger, "parser.got_delta"; "added" => delta.added_classes.len(), "removed" => delta.removed_classes.len());
+
+                        let mut events = SmallVec::new();
+
+                        // lol, de'morgan law in action
+                        let should_send =
+                            !delta.added_classes.is_empty() || !delta.removed_classes.is_empty();
+
+                        if !should_send {
+                            continue;
+                        }
+
+                        for added_class in delta.added_classes {
+                            events.push(UpdateEvent::ClassAdded { class: added_class });
+                        }
+                        for removed_class in delta.removed_classes {
+                            events.push(UpdateEvent::ClassRemoved {
+                                class: removed_class,
+                            });
+                        }
+
+                        if events_consumer.send(events).await.is_err() {
                             slog::error!(self.logger, "parser.delta_channel_err");
                         }
                     }
+
                     Err(err) => {
                         slog::error!(self.logger, "parser.errored"; "err" => ?err);
                         println!("{:#?}", err);
@@ -204,6 +235,13 @@ impl<Parser: ScheduleParser> ParserManager<Parser> {
     }
 }
 
+fn add_oid<T>(iter: impl Iterator<Item = T>) -> impl Iterator<Item = OID<T>> {
+    iter.map(|item| OID {
+        id: ObjectId::new(),
+        data: item,
+    })
+}
+
 // In case db already contrains classes for this day,
 // will return classes that were deleted
 // e.g. user might want notification if class was cancelled
@@ -211,8 +249,9 @@ pub async fn replace_or_fill_day(
     coll: &Collection<Class>,
     classes: impl Iterator<Item = Class>,
 ) -> eyre::Result<ClassDelta> {
+    let coll: OIDCollection<Class> = coll.clone_with_type();
+
     let mut delta = ClassDelta::default();
-    let removed_classes = &mut delta.removed_classes;
     let mut classes = classes.peekable();
 
     let Some(first_class) = classes.peek() else {
@@ -220,38 +259,26 @@ pub async fn replace_or_fill_day(
         return Ok(delta);
     };
 
-    let min_class_start = first_class
-        .range
-        .start
-        .with_time(NaiveTime::from_hms_opt(0, 0, 0).unwrap())
-        .unwrap();
-    let max_class_end = min_class_start
-        .with_time(NaiveTime::from_hms_opt(23, 59, 59).unwrap())
-        .unwrap();
+    let query = crate::db::create_range_query(&first_class.range.start, None);
 
-    let db_stored_classes_query = doc! {"range.start": {"$gt": bson::DateTime::from(min_class_start), "$lt": bson::DateTime::from(max_class_end)}};
-    let mut db_classes = coll.find(db_stored_classes_query).await?;
+    let mut db_classes = coll.find(query).await?;
     let mut db_classes_set = HashSet::new();
-
     while let Some(class) = db_classes.next().await {
         db_classes_set.insert(class?);
     }
 
+    let new_classes_set: HashSet<_, RandomState> = HashSet::from_iter(add_oid(classes));
+
     let mut session = coll.client().start_session().await?;
     session.start_transaction().await?;
-
-    // optimization to handle case when it's a new day parsed
-    if db_classes_set.is_empty() {
-        coll.insert_many(classes).session(&mut session).await?;
-        return Ok(delta);
-    }
-
-    let new_classes_set: HashSet<Class, RandomState> = HashSet::from_iter(classes);
 
     let diff_to_insert = new_classes_set.difference(&db_classes_set);
 
     let diff_to_insert: Vec<_> = diff_to_insert.collect();
     if !diff_to_insert.is_empty() {
+        delta
+            .added_classes
+            .extend(diff_to_insert.iter().map(|i| (*i).clone()));
         coll.insert_many(diff_to_insert.into_iter().cloned())
             .session(&mut session)
             .await?;
@@ -263,7 +290,7 @@ pub async fn replace_or_fill_day(
         coll.find_one_and_delete(mongodb::bson::to_document(class)?)
             .session(&mut session)
             .await?;
-        removed_classes.push(class.clone());
+        delta.removed_classes.push(class.clone());
     }
 
     session.commit_transaction().await?;

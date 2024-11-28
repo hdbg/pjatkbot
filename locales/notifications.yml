@@ -1,4 +1,26 @@
-notification.class.start:
+_version: 2
+classes.format.long:
   en: |
-    <b>PJATK Schedue</b>
+    <pre>
+    Name: %{name}
+    Time: %{from} - %{to}
+    Place: %{place}
+    Type: %{class_type}
+    Lecturer: %{lecturer}
+    </pre>
+
+notifications.class.start:
+  en: |
+    <b>PJATK Schedule</b>
+    You have class starting in <b>%{minutes}</b> minutes.
+
+    %{content}
+
+notifications.class.cancelled:
+  en: |
+    <b>PJATK Schedule</b>
+    <b>!!! Class was cancelled !!!</b>
+
+    %{content}
+
     
