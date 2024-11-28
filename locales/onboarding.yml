@@ -10,11 +10,33 @@ onboarding.language_ru:
   en: "Русский"
 
 onboarding.language.title:
-  en: "Choose your language"
+  en: |
+    <b>Onboarding [1/3]</b>
+    Good day!
+
+    Please, choose your language
+
+  ukr: |
+    <b>Реєстрація [1/3]</b>
+    Доброго дня!
+
+    Будь ласка, оберіть мову
+
+  pl: |
+    <b>Rejestracja [1/3]</b>
+    Dzień dobry!
+
+    Proszę wybrać język
+
+  ru: |
+    <b>Регистрация [1/3]</b>
+    Добрый день!
+
+    Пожалуйста, выберите язык
 
 onboarding.notifications:
   nothing:
-    en: "No notifications"
+    en: "No"
     ukr: "Без сповіщень"
     pl: "Brak powiadomień"
     ru: "Без уведомлений"
@@ -39,24 +61,94 @@ onboarding.notifications:
     pl: "2 godziny przed"
     ru: "За 2 часа"
 
-onboarding.notifications.prompt:
-  en: "Would you like to receive notifications about your classes?"
-  ukr: "Бажаєте отримувати сповіщення про ваші заняття?"
-  pl: "Czy chcesz otrzymywać powiadomienia o swoich zajęciach?"
-  ru: "Хотите получать уведомления о ваших занятиях?"
 
 onboarding.groups:
   prompt:
-    en: "Please, enter your groups. \n\n You can find them in your personal timetable at bottom left corner (guide link).\n Enter each groups on a new line."
-    ukr: "Будь ласка, введіть ваші групи. \n\n Ви можете знайти їх у вашому персональному розкладі в лівому нижньому кутку (посилання на інструкцію).\n Введіть кожну групу на новому рядку."
-    pl: "Proszę wprowadź swoje grupy. \n\n Możesz znaleźć je w swoim osobistym harmonogramie w lewym dolnym rogu (link do przewodnika).\n Wprowadź każdą grupę w nowym wierszu."
-    ru: "Пожалуйста, введите ваши группы. \n\n Вы можете найти их в вашем персональном расписании в левом нижнем углу (ссылка на руководство).\n Введите каждую группу на новой строке."
+    en: |
+      <b>Onboarding [2/3]</b>
+      
+      Please, enter your groups. 
+      
+      You can find them in your personal timetable at bottom left corner (<a href="https://teletype.in/@stanislav22/7Bza_F0hjup">guide link</a>).
+      
+      Enter each groups on a new line."
+
+    ukr: |
+      <b>Реєстрація [2/3]</b>
+      
+      Будь ласка, введіть ваші групи. 
+      
+      Ви можете знайти їх у вашому персональному розкладі в лівому нижньому кутку (<a href="https://teletype.in/@stanislav22/7Bza_F0hjup">посилання на інструкцію</a>).
+      
+      Введіть кожну групу на новому рядку.
+
+    pl: |
+      <b>Rejestracja [2/3]</b>
+      
+      Proszę wprowadzić swoje grupy. 
+      
+      Możesz znaleźć je w swoim osobistym harmonogramie w lewym dolnym rogu (<a href="https://teletype.in/@stanislav22/7Bza_F0hjup">link do instrukcji</a>).
+      
+      Wprowadź każdą grupę w nowym wierszu.
+
+    ru: |
+      <b>Регистрация [2/3]</b>
+      
+      Пожалуйста, введите ваши группы. 
+      
+      Вы можете найти их в вашем персональном расписании в левом нижнем углу (<a href="https://teletype.in/@stanislav22/7Bza_F0hjup">ссылка на инструкцию</a>).
+      
+      Введите каждую группу на новой строке.
   error:
-    en: "Group %{group} is not found. Please, check your input."
-    ukr: "Групу %{group} не знайдено. Будь ласка, перевірте ваш ввід."
-    pl: "Grupa %{group} nie została znaleziona. Sprawdź swoje dane."
-    ru: "Группу %{group} не найдено. Пожалуйста, проверьте правильность ввода."
+    en: |
+      Group %{group} is not found. 
+      Please, check the correctness of your input.
+
+      <b>Note:</b> If your are absolutely sure that you entered it right, it might be the case that you have group in dashboard, but don't have any classes with it yet.
+      In this case, delete this group.
+
+    ukr: |
+      Групу %{group} не знайдено. 
+      Будь ласка, перевірте правильність введення.
+
+      <b>Примітка:</b> Якщо ви абсолютно впевнені, що ввели її правильно, можливо, у вас є група в панелі, але ви ще не маєте з нею жодних занять.
+      У цьому випадку видаліть цю групу.
+
+    pl: |
+      Grupy %{group} nie znaleziono. 
+      Proszę sprawdzić poprawność wprowadzonych danych.
+
+      <b>Uwaga:</b> Jeśli jesteś absolutnie pewien, że wprowadziłeś je poprawnie, to możliwe, że masz grupę w panelu, ale jeszcze nie masz z nią żadnych zajęć.
+      W takim przypadku usuń tę grupę.
+
+    ru: |
+      Группу %{group} не найдено. 
+      Пожалуйста, проверьте правильность ввода.
+
+      <b>Примечание:</b> Если вы абсолютно уверены, что ввели ее правильно, возможно, у вас есть группа в панели, но вы еще не имеете с ней никаких занятий.
+      В этом случае удалите эту группу.s
 
   
 
+onboarding.notifications.prompt:
+  en: |
+    <b>Onboarding [3/3]</b>
+
+    Would you like to receive notifications about your classes?
+
+  ukr: |
+    <b>Реєстрація [3/3]</b>
+
+    Хочете отримувати сповіщення про ваші заняття?
+
+  pl: |
+    <b>Rejestracja [3/3]</b>
+
+    Czy chciałbyś otrzymywać powiadomienia o swoich zajęciach?
+
+  ru: |
+    <b>Регистрация [3/3]</b>
+
+    Хотели бы вы получать уведомления о ваших занятиях?
+    
   

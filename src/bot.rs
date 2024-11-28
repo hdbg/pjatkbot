@@ -5,11 +5,13 @@ use mongodb::Collection;
 use notifications_sender::notifications_sender;
 use slog::Logger;
 use teloxide::{
+    adaptors::DefaultParseMode,
     dispatching::{
         dialogue::{GetChatId, InMemStorage},
         DefaultKey,
     },
     prelude::*,
+    types::ParseMode,
     utils::command::{self, BotCommands},
 };
 use tokio::sync::Mutex;
@@ -32,7 +34,7 @@ pub struct BotConfig {
 }
 
 pub struct BotState {
-    bot: Mutex<Bot>,
+    bot: Mutex<OurBot>,
     pub config: &'static BotConfig,
     pub users_coll: Collection<User>,
     pub classes_coll: Collection<Class>,
@@ -40,6 +42,8 @@ pub struct BotState {
 }
 type DialogueStorage<State> = teloxide::dispatching::dialogue::InMemStorage<State>;
 type BotDialogue<State> = teloxide::dispatching::dialogue::Dialogue<State, DialogueStorage<State>>;
+
+type OurBot = DefaultParseMode<Bot>;
 
 type HandlerResult = eyre::Result<()>;
 
@@ -99,13 +103,13 @@ pub fn setup_bot(
     logger: &Logger,
     db: &mongodb::Database,
     notification_rx: impl channels::Rx<NotificationEvents>,
-) -> Dispatcher<Bot, eyre::Report, DefaultKey> {
+) -> Dispatcher<OurBot, eyre::Report, DefaultKey> {
     let users_coll = db.collection(&User::COLLECTION_NAME);
     let classes_coll = db.collection(&Class::COLLECTION_NAME);
 
     let logger = logger.new(slog::o!("subsystem" => "bot"));
 
-    let bot = Bot::new(config.telegram.bot_token.clone());
+    let bot = Bot::new(config.telegram.bot_token.clone()).parse_mode(ParseMode::Html);
 
     let state = Arc::new(BotState {
         bot: Mutex::new(bot.clone()),
@@ -155,16 +159,18 @@ pub mod notifications_sender {
     use chrono::{Datelike, Utc};
     use eyre::bail;
     use slog::Logger;
-    use teloxide::{payloads::SendMessageSetters, prelude::Requester, types::ParseMode, Bot};
+    use teloxide::{
+        adaptors::DefaultParseMode, payloads::SendMessageSetters, prelude::Requester,
+        types::ParseMode, Bot,
+    };
 
+    use super::{common::formatters::format_class_long, BotState, OurBot};
     use crate::{channels, db::UserID, notifications::NotificationEvents, parsing::types::Class};
-
-    use super::{common::formatters::format_class_long, BotState};
 
     const RESEND_ATTEMPTS: usize = 10;
 
     async fn send_message_safe(
-        bot: &Bot,
+        bot: &OurBot,
         user: UserID,
         logger: &Logger,
         message: String,
@@ -355,7 +361,7 @@ pub mod gui {
 
     use crate::{bot::common::formatters::format_class_short, db::User, parsing::types::Class};
 
-    use super::{BotState, HandlerResult};
+    use super::{BotState, HandlerResult, OurBot};
 
     pub mod user_onboard_dialog;
 
@@ -453,7 +459,7 @@ pub mod gui {
         .to_string())
     }
 
-    pub async fn main_menu(bot: Bot, bot_state: Arc<BotState>, user: User) -> HandlerResult {
+    pub async fn main_menu(bot: OurBot, bot_state: Arc<BotState>, user: User) -> HandlerResult {
         bot.send_message(user.telegram_id, format_mainmenu(&bot_state, &user).await?)
             .parse_mode(ParseMode::Html)
             .await?;

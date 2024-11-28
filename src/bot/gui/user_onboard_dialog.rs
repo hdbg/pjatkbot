@@ -7,12 +7,12 @@ use teloxide::{
     dptree,
     payloads::SendMessageSetters,
     prelude::{DependencyMap, Requester},
-    types::{ChatId, InlineKeyboardButton, InlineKeyboardMarkup, Update},
+    types::{ChatId, InlineKeyboardButton, InlineKeyboardMarkup, ParseMode, Update},
     Bot,
 };
 
 use crate::{
-    bot::{create_storage, BotDialogue, BotState, DialogueStorage},
+    bot::{create_storage, BotDialogue, BotState, DialogueStorage, OurBot},
     db::{Language, NotificationConstraint},
     parsing::types::Group,
 };
@@ -109,12 +109,13 @@ fn format_languages_keyboard() -> InlineKeyboardMarkup {
 }
 
 pub async fn entrypoint(
-    bot: Bot,
+    bot: OurBot,
     user_id: ChatId,
     dialogue: BotDialogue<Stages>,
     state: Arc<BotState>,
 ) -> super::HandlerResult {
     bot.send_message(user_id, t!("onboarding.language.title", locale = "en"))
+        .parse_mode(ParseMode::Html)
         .reply_markup(format_languages_keyboard())
         .await?;
 
@@ -129,16 +130,19 @@ mod senders {
     use teloxide::{
         payloads::{EditMessageTextSetters, SendMessageSetters},
         prelude::Requester,
-        types::{ChatId, InlineKeyboardMarkup, MaybeInaccessibleMessage, UserId},
+        types::{ChatId, InlineKeyboardMarkup, MaybeInaccessibleMessage, ParseMode, UserId},
         Bot,
     };
 
-    use crate::{bot::HandlerResult, db::Language};
+    use crate::{
+        bot::{HandlerResult, OurBot},
+        db::Language,
+    };
 
     use super::format_notifications_keyboard;
 
     pub async fn send_groups_selection(
-        bot: Bot,
+        bot: OurBot,
         user_id: ChatId,
         msg_id: MaybeInaccessibleMessage,
         language: &Language,
@@ -149,6 +153,7 @@ mod senders {
             MaybeInaccessibleMessage::Inaccessible(_) => bot.send_message(user_id, content).await?,
             MaybeInaccessibleMessage::Regular(msg) => {
                 bot.edit_message_text(user_id, msg.id, content)
+                    .parse_mode(ParseMode::Html)
                     .reply_markup(InlineKeyboardMarkup::default())
                     .await?
             }
@@ -158,7 +163,7 @@ mod senders {
     }
 
     pub async fn send_notifications_prompt(
-        bot: Bot,
+        bot: OurBot,
         user_id: ChatId,
         language: &Language,
     ) -> HandlerResult {
@@ -167,6 +172,7 @@ mod senders {
         let prompt = t!("onboarding.notifications.prompt", locale = language.code());
 
         bot.send_message(user_id, prompt)
+            .parse_mode(ParseMode::Html)
             .reply_markup(languages_keyboard)
             .await?;
 
@@ -180,13 +186,14 @@ mod handlers {
     use bson::doc;
     use chrono::Utc;
     use teloxide::{
+        payloads::SendMessageSetters,
         prelude::Requester,
-        types::{CallbackQuery, Message},
+        types::{CallbackQuery, Message, ParseMode},
         Bot,
     };
 
     use crate::{
-        bot::{self, BotDialogue, BotState, HandlerResult},
+        bot::{self, BotDialogue, BotState, HandlerResult, OurBot},
         db::{self, Language},
         parsing::types::Group,
     };
@@ -196,7 +203,7 @@ mod handlers {
     type Type = HandlerResult;
 
     pub async fn handle_language_selection(
-        bot: Bot,
+        bot: OurBot,
         state: Arc<BotState>,
         answer: CallbackQuery,
         dialogue: BotDialogue<Stages>,
@@ -227,7 +234,7 @@ mod handlers {
     }
 
     pub async fn handle_group_selection(
-        bot: Bot,
+        bot: OurBot,
         dialogue: BotDialogue<Stages>,
         state: Arc<BotState>,
         message: Message,
@@ -259,6 +266,7 @@ mod handlers {
                         locale = &language.code()
                     ),
                 )
+                .parse_mode(ParseMode::Html)
                 .await?;
                 return Ok(());
             }
@@ -277,7 +285,7 @@ mod handlers {
     }
 
     pub async fn handle_notifications_choice(
-        bot: Bot,
+        bot: OurBot,
         (groups, language): (Vec<Group>, Language),
         state: Arc<BotState>,
         answer: CallbackQuery,
