@@ -3048,6 +3048,7 @@ name = "schedulebot"
 version = "0.1.0"
 dependencies = [
  "async-channel",
+ "async-trait",
  "bson",
  "chrono",
  "chrono-tz",

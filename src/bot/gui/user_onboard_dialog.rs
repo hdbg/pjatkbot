@@ -183,8 +183,9 @@ mod senders {
 mod handlers {
     use std::{collections::HashSet, str::FromStr, sync::Arc};
 
-    use bson::doc;
+    use bson::{doc, oid::ObjectId};
     use chrono::Utc;
+    use smallvec::smallvec;
     use teloxide::{
         payloads::SendMessageSetters,
         prelude::Requester,
@@ -194,7 +195,8 @@ mod handlers {
 
     use crate::{
         bot::{self, BotDialogue, BotState, HandlerResult, OurBot},
-        db::{self, Language},
+        db::{self, Language, OID},
+        notifications::UpdateEvent,
         parsing::types::Group,
     };
 
@@ -310,21 +312,33 @@ mod handlers {
             None => HashSet::default(),
         };
 
-        let new_user = db::User {
-            telegram_id: answer.from.id.into(),
-            role: db::Role::User,
-            groups,
-            language,
-            constraints,
-            join_date: Utc::now(),
+        let new_user = OID {
+            data: db::User {
+                telegram_id: answer.from.id.into(),
+                role: db::Role::User,
+                groups,
+                language,
+                constraints,
+                join_date: Utc::now(),
+            },
+            id: ObjectId::new(),
         };
-        state.users_coll.insert_one(new_user.clone()).await?;
+
+        let users_coll = state.users_coll.clone_with_type();
+        users_coll.insert_one(new_user.clone()).await?;
+
+        state
+            .update_tx
+            .send(smallvec![UpdateEvent::UserUpdate {
+                user: new_user.clone()
+            }])
+            .await?;
 
         slog::info!(state.logger, "onboard.succ_registered"; "userid" => ?answer.from.id);
 
         dialogue.exit().await?;
 
-        bot::gui::main_menu(bot, state, new_user).await?;
+        bot::gui::main_menu(bot, state, new_user.data).await?;
 
         Ok(())
     }

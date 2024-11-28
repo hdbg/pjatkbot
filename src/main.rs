@@ -12,6 +12,7 @@ pub mod parsing;
 
 pub mod channels {
     use eyre::Error;
+    use futures::TryFutureExt;
 
     pub trait Tx<Item: Send + 'static>: 'static + Send {
         type Error: std::error::Error + std::fmt::Debug;
@@ -40,6 +41,27 @@ pub mod channels {
             Ok(item)
         }
     }
+
+    #[async_trait::async_trait]
+    pub trait DynTx<Item: Send + 'static>: 'static + Send + Sync {
+        async fn send(&self, item: Item) -> Result<(), eyre::Report>;
+    }
+
+    #[async_trait::async_trait]
+    impl<Item, T> DynTx<Item> for T
+    where
+        T: Tx<Item> + 'static + Send + Sync,
+        Item: Send + 'static,
+        Self: Sync,
+    {
+        async fn send(&self, item: Item) -> Result<(), eyre::Report> {
+            <Self as Tx<Item>>::send(self, item)
+                .map_err(eyre::Report::from)
+                .await
+        }
+    }
+
+    pub type DynamicTx<T> = Box<dyn DynTx<T>>;
 }
 
 #[macro_use]
@@ -68,11 +90,28 @@ async fn main() -> eyre::Result<()> {
     let _log_guard = slog_scope::set_global_logger(logger.clone());
     slog_stdlog::init_with_level(log::Level::Info)?;
     slog::info!(logger, "boot");
+
     let (notifications_tx, notifications_rx) = kanal::unbounded_async();
 
-    let mut bot = bot::setup_bot(config, &logger, &db, notifications_rx);
+    let (updates_tx, updates_rx) = kanal::unbounded_async();
 
-    let mut tasks = setup_tasks(&db, &config, &logger, notifications_tx).await?;
+    let mut bot = bot::setup_bot(
+        config,
+        &logger,
+        &db,
+        notifications_rx,
+        Box::new(updates_tx.clone()),
+    );
+
+    let mut tasks = setup_tasks(
+        &db,
+        &config,
+        &logger,
+        notifications_tx,
+        updates_tx,
+        updates_rx,
+    )
+    .await?;
 
     tokio::select! {
         Some(tasks) = tasks.join_next() => {
@@ -95,9 +134,10 @@ async fn setup_tasks(
     config: &'static Config,
     logger: &Logger,
     notifications_tx: impl channels::Tx<notifications::NotificationEvents> + Clone,
+    updates_tx: impl channels::Tx<notifications::UpdateEvents>,
+    updates_rx: impl channels::Rx<notifications::UpdateEvents>,
 ) -> eyre::Result<JoinSet<Result<eyre::Result<Infallible>, tokio::task::JoinError>>> {
     let mut handle_set = JoinSet::new();
-    let (updates_tx, updates_rx) = kanal::unbounded_async();
 
     let pjatk = Parser::new();
     let parser_manager = parsing::manager::ParserManager::new(&db, pjatk, &config.pjatk, &logger);

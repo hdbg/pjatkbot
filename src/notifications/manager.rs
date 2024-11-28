@@ -244,7 +244,7 @@ impl NotificationManager {
             }
         }
 
-        todo!()
+        Ok(())
     }
 
     async fn handle_message(&self, msg: UpdateEvent) -> eyre::Result<Option<NotificationEvent>> {

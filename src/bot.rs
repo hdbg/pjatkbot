@@ -17,9 +17,9 @@ use teloxide::{
 use tokio::sync::Mutex;
 
 use crate::{
-    channels,
+    channels::{self, DynTx, DynamicTx},
     db::{Model, User},
-    notifications::NotificationEvents,
+    notifications::{NotificationEvents, UpdateEvents},
     parsing::types::Class,
     Config,
 };
@@ -35,6 +35,8 @@ pub struct BotConfig {
 
 pub struct BotState {
     bot: Mutex<OurBot>,
+    update_tx: DynamicTx<UpdateEvents>,
+
     pub config: &'static BotConfig,
     pub users_coll: Collection<User>,
     pub classes_coll: Collection<Class>,
@@ -103,6 +105,7 @@ pub fn setup_bot(
     logger: &Logger,
     db: &mongodb::Database,
     notification_rx: impl channels::Rx<NotificationEvents>,
+    update_tx: DynamicTx<UpdateEvents>,
 ) -> Dispatcher<OurBot, eyre::Report, DefaultKey> {
     let users_coll = db.collection(&User::COLLECTION_NAME);
     let classes_coll = db.collection(&Class::COLLECTION_NAME);
@@ -116,6 +119,7 @@ pub fn setup_bot(
         config: &config.telegram,
         users_coll,
         classes_coll,
+        update_tx,
         logger,
     });
 
