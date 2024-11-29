@@ -79,7 +79,7 @@ pub struct Config {
 }
 
 const BOT_TIMEZONE: chrono_tz::Tz = chrono_tz::Europe::Warsaw;
-i18n!();
+i18n!("locales", fallback = "en");
 
 #[tokio::main]
 async fn main() -> eyre::Result<()> {

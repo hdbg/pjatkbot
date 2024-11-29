@@ -390,7 +390,6 @@ pub mod gui {
             .collect();
         final_query.extend(crate::db::create_range_query(&date, start_point).into_iter());
         final_query.extend(doc! {"$or": group_constraints}.into_iter());
-        println!("{:#?}", final_query);
 
         let mut class_query = state.classes_coll.find(final_query).await?;
 
