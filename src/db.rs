@@ -115,13 +115,13 @@ pub trait Model {
 
 pub fn create_range_query<T: TimeZone>(
     date: &DateTime<T>,
-    end_point: Option<DateTime<T>>,
+    start_point: Option<DateTime<T>>,
 ) -> mongodb::bson::Document {
     let end = date
         .with_time(NaiveTime::from_hms_opt(23, 59, 59).unwrap())
         .unwrap();
 
-    let start_point = end_point.unwrap_or_else(|| date.with_time(NaiveTime::MIN).unwrap());
+    let start_point = start_point.unwrap_or_else(|| date.with_time(NaiveTime::MIN).unwrap());
 
     mongodb::bson::doc! {"range.start": {"$gt": bson::DateTime::from(start_point), "$lt": bson::DateTime::from(end)}}
 }

@@ -359,7 +359,7 @@ pub mod gui {
     use std::sync::Arc;
 
     use bson::doc;
-    use chrono::{DateTime, Days, Timelike, Utc};
+    use chrono::{DateTime, Days, TimeZone, Timelike, Utc};
     use futures::StreamExt;
     use teloxide::{payloads::SendMessageSetters, prelude::Requester, types::ParseMode, Bot};
 
@@ -375,11 +375,11 @@ pub mod gui {
         date: &DateTime<Utc>,
         user: &User,
         state: &BotState,
-        end_point: Option<DateTime<Utc>>,
+        start_point: Option<DateTime<Utc>>,
     ) -> eyre::Result<Vec<Class>> {
         // fix for considering days in user's timezone
         let date = date.with_timezone(&BOT_TIMEZONE);
-        let start_point = end_point.map(|date| date.with_timezone(&BOT_TIMEZONE));
+        let start_point = start_point.map(|date| date.with_timezone(&BOT_TIMEZONE));
 
         let mut final_query = mongodb::bson::Document::default();
 
@@ -390,6 +390,7 @@ pub mod gui {
             .collect();
         final_query.extend(crate::db::create_range_query(&date, start_point).into_iter());
         final_query.extend(doc! {"$or": group_constraints}.into_iter());
+        println!("{:#?}", final_query);
 
         let mut class_query = state.classes_coll.find(final_query).await?;
 

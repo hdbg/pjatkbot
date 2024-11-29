@@ -100,7 +100,6 @@ impl NotificationManager {
                 }
             }
         }
-        slog::debug!(self.logger, "handle_class_add.finished");
 
         Ok(())
     }

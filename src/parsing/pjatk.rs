@@ -281,7 +281,7 @@ impl Parser {
     async fn parse_day_raw(&mut self, req: NaiveDate) -> Result<Vec<PjatkClass>, ParseError> {
         let mut classes = Vec::new();
 
-        let resp = self
+        let mut resp = self
             .client
             .get(GENERAL_SCHEDULE_ENDPOINT)
             // .form(&self.state)
@@ -294,15 +294,18 @@ impl Parser {
         self.update_state_from_html(&resp)?;
         self.prepare_date_update_state(&req);
 
-        let resp = self
-            .client
-            .post(GENERAL_SCHEDULE_ENDPOINT)
-            .headers(Self::default_headers())
-            .form(&self.state)
-            .send()
-            .await?;
-
-        let resp = resp.error_for_status()?.text().await?;
+        if req != Utc::now().date_naive() {
+            resp = self
+                .client
+                .post(GENERAL_SCHEDULE_ENDPOINT)
+                .headers(Self::default_headers())
+                .form(&self.state)
+                .send()
+                .await?
+                .error_for_status()?
+                .text()
+                .await?;
+        }
 
         let class_id_style_collected = self.collect_class_ids(&resp)?;
 

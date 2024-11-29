@@ -258,7 +258,6 @@ pub async fn replace_or_fill_day(
         // no work to do
         return Ok(delta);
     };
-
     let query = crate::db::create_range_query(&first_class.range.start, None);
 
     let mut db_classes = coll.find(query).await?;
