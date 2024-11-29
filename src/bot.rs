@@ -428,8 +428,7 @@ pub mod gui {
 
     async fn format_mainmenu(bot_state: &BotState, user: &User) -> eyre::Result<String> {
         let today_classes =
-            select_classes_for_user_and_date(&Utc::now(), &user, &bot_state, Some(Utc::now()))
-                .await?;
+            select_classes_for_user_and_date(&Utc::now(), &user, &bot_state, None).await?;
         let tomorrow_classes = select_classes_for_user_and_date(
             &(Utc::now().checked_add_days(Days::new(1)).unwrap()),
             &user,
