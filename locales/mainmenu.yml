@@ -2,36 +2,53 @@ _version: 2
 
 greeting.morning:
   en: "Good morning!"
+  ukr: "Доброго ранку!"
+  ru: "Доброе утро!"
 
 greeting.afternoon:
   en: "Good day!"
+  ukr: "Добрий день!"
+  ru: "Добрый день!"
 
 greeting.evening:
   en: "Good evening!"
+  ukr: "Добрий вечір!"
+  ru: "Добрый вечер!"
 
 classes.today.ahead.none:
   en: "You have no classes left for today."
+  ru: "На сегодня у вас больше нет пар."
+  ukr: "На сьогодні у вас більше немає пар."
 
 classes.today.ahead.some:
   en: "You have <b>%{count}</b> classes left for today."
+  ru: "На сегодня у вас осталось <b>%{count}</b> пар."
+  ukr: "На сьогодні у вас залишилось <b>%{count}</b> пар."
 
 classes.tomorrow.ahead.none:
   en: "You have no classes for tomorrow."
+  ru: "У вас нет пар на завтра."
+  ukr: "У вас немає пар на завтра."
 
 classes.tomorrow.ahead.some:
   en: "You have <b>%{count}</b> classes for tomorrow."
+  en: "У вас <b>%{count}</b> пары на завтра."
+  ukr: "У вас <b>%{count}</b> пар на завтра."
 
 classes.format.short:
   en: "%{code} [%{kind}] %{place}\t- %{from} => %{until} "
 
 classes.type.seminar:
   en: "Seminar"
+  ru: "Практика"
 
 classes.type.lecture:
   en: "Lecture"
+  ru: "Лекция"
 
 classes.type.diploma_thesis:
-  en: "Lecture"
+  en: "Diploma"
+  ru: "Дипломная работа"
 
 classes.place.online:
   en: "Online"
@@ -54,6 +71,15 @@ mainmenu:
       %{greeting}
 
       <b>На сьогодні</b>
+      %{lectures_today}
+      <b>На завтра</b>
+      %{lectures_tomorrow}
+
+    ru: |
+      <b>PJATK Расписание</b>
+      %{greeting}
+
+      <b>На сегодня</b>
       %{lectures_today}
       <b>На завтра</b>
       %{lectures_tomorrow}
