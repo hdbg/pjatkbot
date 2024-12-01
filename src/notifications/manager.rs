@@ -45,12 +45,6 @@ impl NotificationManager {
         }
     }
 
-    async fn remove_old_notifications(&self) -> eyre::Result<()> {
-        let query = doc! {"fire_date": {"$lt": bson::DateTime::from_chrono(Utc::now())}};
-        self.notifications.delete_many(query).await?;
-        Ok(())
-    }
-
     async fn upsert_notification(&self, notification: Notification) -> eyre::Result<()> {
         let as_doc = mongodb::bson::to_document(&notification)?;
         self.notifications
@@ -207,7 +201,6 @@ impl NotificationManager {
             }
         }
 
-        self.remove_old_notifications().await?;
         Ok(())
     }
 
