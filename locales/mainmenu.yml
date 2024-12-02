@@ -21,8 +21,8 @@ classes.today.ahead.none:
   ukr: "На сьогодні у вас більше немає пар."
 
 classes.today.ahead.some:
-  en: "You have <b>%{count}</b> classes left for today."
-  ru: "На сегодня у вас осталось <b>%{count}</b> пар."
+  en: "You have <b>%{count}</b> classes  for today."
+  ru: "На сегодня у вас <b>%{count}</b> пары."
   ukr: "На сьогодні у вас залишилось <b>%{count}</b> пар."
 
 classes.tomorrow.ahead.none:
@@ -32,7 +32,7 @@ classes.tomorrow.ahead.none:
 
 classes.tomorrow.ahead.some:
   en: "You have <b>%{count}</b> classes for tomorrow."
-  en: "У вас <b>%{count}</b> пары на завтра."
+  ru: "У вас <b>%{count}</b> пары на завтра."
   ukr: "У вас <b>%{count}</b> пар на завтра."
 
 classes.format.short:

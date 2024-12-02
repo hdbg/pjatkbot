@@ -3,7 +3,7 @@ use std::{collections::HashSet, convert::Infallible, hash::RandomState};
 use bson::{doc, oid::ObjectId};
 use chrono::{NaiveDate, NaiveTime, TimeDelta, Utc};
 
-use futures::{Sink, SinkExt, StreamExt};
+use futures::{Sink, SinkExt, StreamExt, TryStreamExt};
 use mongodb::Collection;
 use serde::Serialize;
 use slog::Logger;
@@ -235,13 +235,6 @@ impl<Parser: ScheduleParser> ParserManager<Parser> {
     }
 }
 
-fn add_oid<T>(iter: impl Iterator<Item = T>) -> impl Iterator<Item = OID<T>> {
-    iter.map(|item| OID {
-        id: ObjectId::new(),
-        data: item,
-    })
-}
-
 // In case db already contrains classes for this day,
 // will return classes that were deleted
 // e.g. user might want notification if class was cancelled
@@ -249,47 +242,52 @@ pub async fn replace_or_fill_day(
     coll: &Collection<Class>,
     classes: impl Iterator<Item = Class>,
 ) -> eyre::Result<ClassDelta> {
-    let coll: OIDCollection<Class> = coll.clone_with_type();
-
     let mut delta = ClassDelta::default();
-    let mut classes = classes.peekable();
+    let mut classes_new = classes.peekable();
 
-    let Some(first_class) = classes.peek() else {
-        // no work to do
+    let Some(first_new_class) = classes_new.peek() else {
         return Ok(delta);
     };
-    let query = crate::db::create_range_query(&first_class.range.start, None);
 
-    let mut db_classes = coll.find(query).await?;
-    let mut db_classes_set = HashSet::new();
-    while let Some(class) = db_classes.next().await {
-        db_classes_set.insert(class?);
+    let coll = coll.clone_with_type::<OID<Class>>();
+    let classes_in_db_query = crate::db::create_range_query(&first_new_class.range.start, None);
+
+    let classes_in_db: Vec<_> = coll.find(classes_in_db_query).await?.try_collect().await?;
+
+    // first we find classes that aren't present
+    for class_new in classes_new.by_ref() {
+        let does_db_have = classes_in_db
+            .iter()
+            .any(|db_class| db_class.data == class_new);
+
+        if !does_db_have {
+            let class_new = OID {
+                id: ObjectId::new(),
+                data: class_new.clone(),
+            };
+
+            delta.added_classes.push(class_new);
+        }
     }
-
-    let new_classes_set: HashSet<_, RandomState> = HashSet::from_iter(add_oid(classes));
 
     let mut session = coll.client().start_session().await?;
     session.start_transaction().await?;
 
-    let diff_to_insert = new_classes_set.difference(&db_classes_set);
+    // now we remove all classes from db that were cancelled
+    for class_in_db in classes_in_db {
+        let does_new_includes = classes_new.any(|new_class| &new_class == &class_in_db.data);
 
-    let diff_to_insert: Vec<_> = diff_to_insert.collect();
-    if !diff_to_insert.is_empty() {
-        delta
-            .added_classes
-            .extend(diff_to_insert.iter().map(|i| (*i).clone()));
-        coll.insert_many(diff_to_insert.into_iter().cloned())
-            .session(&mut session)
-            .await?;
+        if does_new_includes {
+            coll.delete_one(doc! {"_id": &class_in_db.id}).await?;
+            delta.removed_classes.push(class_in_db);
+        }
     }
 
-    let diff_to_remove = db_classes_set.difference(&new_classes_set);
+    // batch insert all classes that are new
 
-    for class in diff_to_remove.into_iter() {
-        coll.find_one_and_delete(mongodb::bson::to_document(class)?)
-            .session(&mut session)
+    if !delta.added_classes.is_empty() {
+        coll.insert_many(delta.added_classes.clone().into_iter())
             .await?;
-        delta.removed_classes.push(class.clone());
     }
 
     session.commit_transaction().await?;
