@@ -262,23 +262,8 @@ impl NotificationManager {
     ) -> eyre::Result<tokio::task::JoinHandle<eyre::Result<Infallible>>> {
         self.full_resync().await?;
         let fut = async move {
-            let mut resync_interval =
-                tokio::time::interval(self.config.full_resync_interval.clone());
-
-            resync_interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
-
             loop {
                 tokio::select! {
-                    // _ = resync_interval.tick() => {
-                    //     match self.full_resync().await {
-                    //         Ok(_) => {
-                    //             slog::info!(self.logger, "loop.resync.ok");
-                    //         },
-                    //         Err(err) => {
-                    //             slog::error!(self.logger, "loop.full_resync_error"; "err" => ?err);
-                    //         }
-                    //     }
-                    // }
                     msg = rx.recv() => {
                         match msg {
                             Ok(msgs) => {
