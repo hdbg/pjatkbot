@@ -222,7 +222,6 @@ impl<Parser: ScheduleParser> ParserManager<Parser> {
 
                     Err(err) => {
                         slog::error!(self.logger, "parser.errored"; "err" => ?err);
-                        println!("{:#?}", err);
                     }
 
                     _ => (),

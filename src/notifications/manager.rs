@@ -299,6 +299,7 @@ impl NotificationManager {
                             },
                             Err(err) => {
                                 slog::error!(self.logger, "loop.channel_closed"; "err" => ?err);
+                                eyre::bail!("channel got closed");
 
                             }
                         }

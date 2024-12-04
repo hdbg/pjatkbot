@@ -9,13 +9,16 @@ async-trait = "0.1.83"
 bson = { version = "2.13.0", features = ["chrono", "chrono-0_4"] }
 chrono = { version = "0.4.38", features = ["serde"] }
 chrono-tz = { version = "0.10.0", features = ["serde"] }
+derive-new = "0.7.0"
+derive_builder = { version = "0.20.2", features = ["alloc", "clippy"] }
 eyre = { version = "0.6.12", features = ["track-caller"] }
 failsafe = "1.3.0"
 futures = "0.3.31"
+http = "1.2.0"
 kanal = "0.1.0-pre8"
 log = "0.4.22"
 mongodb = "3.1.0"
-reqwest = { version = "0.12.8", features = ["brotli", "deflate", "gzip", "zstd"] }
+reqwest = { version = "0.12.8", features = ["brotli", "cookies", "deflate", "gzip", "zstd"] }
 rust-i18n = { version = "3.1.2", features = ["log-miss-tr"] }
 scraper = "0.20.0"
 serde = { version = "1.0.210", features = ["derive"] }
