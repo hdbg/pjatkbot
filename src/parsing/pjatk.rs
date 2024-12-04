@@ -20,6 +20,7 @@ pub enum ParseError {
 
 #[derive(Debug)]
 pub struct PjatkClass {
+    pub id: String,
     pub name: String,
     pub code: String,
     pub kind: String,
@@ -74,7 +75,11 @@ impl Parser {
 
         html.select(&reservation_title_selector).count() > 0
     }
-    fn parse_detail_html(fragment: &str, code: &str) -> Result<Option<PjatkClass>, ParseError> {
+    fn parse_detail_html(
+        class_id: &str,
+        fragment: &str,
+        code: &str,
+    ) -> Result<Option<PjatkClass>, ParseError> {
         let document = scraper::Html::parse_fragment(fragment);
         if Self::is_reservation(&document) {
             return Ok(None);
@@ -106,6 +111,7 @@ impl Parser {
             };
         }
         Ok(Some(PjatkClass {
+            id: class_id.to_owned(),
             name: parse_selector!(document, NAME_SELECTOR),
             code: parse_selector!(document, CODE_SELECTOR),
             kind: parse_selector!(document, LECTURE_KIND),
@@ -121,7 +127,7 @@ impl Parser {
 
     async fn parse_detail(
         &mut self,
-        key: &str,
+        class_id: &str,
         style: &str,
     ) -> Result<Option<PjatkClass>, ParseError> {
         let mut state = self.state.clone();
@@ -136,7 +142,7 @@ impl Parser {
             ["__EVENTARGUMENT", "undefined"],
             [
                 "RadToolTipManager1_ClientState",
-                format!(r#"{{"AjaxTargetControl":"{key}","Value":"{key}"}}"#)
+                format!(r#"{{"AjaxTargetControl":"{class_id}","Value":"{class_id}"}}"#)
             ],
             ["RadToolTipManager2_ClientState", ""],
             ["__ASYNCPOST", "true"],
@@ -190,7 +196,7 @@ impl Parser {
 
         let fragment_html = fragment_html.join("\n");
 
-        Self::parse_detail_html(&fragment_html, style)
+        Self::parse_detail_html(class_id, &fragment_html, style)
     }
 
     fn update_state_from_html(&mut self, text: &str) -> Result<(), ParseError> {

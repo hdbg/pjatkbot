@@ -66,6 +66,7 @@ pub fn deduct_all(item: PjatkClass) -> Class {
         lecturer: item.lecturer,
         name: item.name,
         code: item.code,
+        class_id: item.id,
     }
 }
 pub fn multi(input: impl Iterator<Item = PjatkClass>) -> Vec<Class> {

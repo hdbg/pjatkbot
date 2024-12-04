@@ -57,6 +57,7 @@ pub enum ClassPlace {
 
 #[derive(Debug, Hash, serde::Serialize, serde::Deserialize, Clone, PartialEq, Eq)]
 pub struct Class {
+    pub class_id: String,
     pub name: String,
     pub code: String,
     pub kind: ClassKind,
